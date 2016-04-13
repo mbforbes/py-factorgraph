@@ -1,5 +1,5 @@
 '''
-Implementation of graph.
+Implementation of factor graph.
 
 Author: mbforbes
 
@@ -102,7 +102,6 @@ class Graph(object):
         # Add it.
         self._factors += [factor]
 
-
     def joint(self, x):
         '''
         Joint is over the factors.
@@ -187,6 +186,38 @@ class Graph(object):
                 best_r = r
                 best_a = full_a
         return best_a, best_r
+
+    def lbp(self):
+        '''
+        Loopy belief propagation.
+        '''
+        # Sketch of algorithm:
+        # -------------------
+        # preprocessing:
+        # - sort nodes (rvs? factors?) by number of edges
+        #
+        # note:
+        # - every time message sent, normalize if too large or small
+        #
+        # running (loop):
+        # - initialize messages to 1
+        # - for each node in sorted list (fewest edges to most):
+        #     - send messages to neighbors (from which message wasn't received)
+        # - for each node in *reverse* sorted list (most edges to fewest):
+        #     - send messages to neighbors (from which message wasn't received)
+        # - for each node:
+        #     - ensure message was sent on every edge
+        # - check convergence of messages
+        #
+        # after finished:
+        # - compute marginals for rvs (I think?) and factors
+        #
+        # questions:
+        # - do we have to do all RVs then all Factors? Can we mix up the order?
+        #   *Should* we do one or the other?
+        #
+        # - do factors get updated? or is it just messages?
+        pass
 
     def print_stats(self):
         print 'Graph stats:'
