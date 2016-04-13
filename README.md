@@ -4,7 +4,7 @@ Factor graph and loopy belief propagation in Python
 # TODO
 
 -	[ ] graph
--	[ ] (l)bp
+-	[ ] bp/lbp
 -	[ ] examples
 -	[ ] repo structure
 -	[ ] tests

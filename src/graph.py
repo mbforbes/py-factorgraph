@@ -146,6 +146,48 @@ class Graph(object):
             prod *= f.eval(x)
         return prod
 
+    def bf_best_joint(self):
+        '''
+        Brute-force algorithm to compute the best joint assignment to the
+        factor graph given the current beliefs in the factors.
+
+        This takes O(v^n) time, where
+            v   is the # of possible assignments to each RV
+            n   is the # of RVs
+
+        This is bad. This function is given for debugging / proof of concept
+        only.
+
+        Returns:
+            ({str: int}, float)
+        '''
+        return self._bf_bj_recurse({}, self._rvs.values())
+
+    def _bf_bj_recurse(self, assigned, todo):
+        '''
+        Helper method for bf_best_joint.
+
+        Args:
+            assigned ({str: int})
+            todo ([RV])
+        '''
+        # base case: just look up the current assignment
+        if len(todo) == 0:
+            return assigned, self.joint(assigned)
+
+        # recursive case: pull off one RV and try all options.
+        best_a, best_r = None, 0.0
+        rv = todo[0]
+        todo = todo[1:]
+        for val in range(rv.n_opts):
+            new_a = assigned.copy()
+            new_a[rv.name] = val
+            full_a, r = self._bf_bj_recurse(new_a, todo)
+            if r > best_r:
+                best_r = r
+                best_a = full_a
+        return best_a, best_r
+
     def print_stats(self):
         print 'Graph stats:'
         print '\t%d RVs' % (len(self._rvs))
@@ -425,9 +467,9 @@ def main():
     f_bar = Factor([r2])
 
     # beliefs
-    b = np.array([[0, 2, 0.32453563], [4, 5, 5]])
+    b = np.array([[3, 2, 0.32453563], [2, 5, 5]])
     f.set_belief(b)
-    b2 = np.array([1.0, 2.0, 3.0])
+    b2 = np.array([8.0, 2.0, 3.0])
     f_bar.set_belief(b2)
 
     # add to a graph
@@ -439,7 +481,8 @@ def main():
 
     # Print stuff
     g.print_stats()
-    print g.joint({'foo': 2, 'bar': 1})
+    print 'Joint for foo=2, bar=1:', g.joint({'foo': 1, 'bar': 1})
+    print 'Best joint:', g.bf_best_joint()
 
 if __name__ == '__main__':
     main()
