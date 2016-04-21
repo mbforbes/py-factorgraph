@@ -40,6 +40,9 @@ Notes:
 # Imports
 # -----------------------------------------------------------------------------
 
+# Builtins
+import code
+
 # 3rd party
 import numpy as np
 
@@ -54,6 +57,14 @@ import numpy as np
 # specify when creating each instance, but this global switch is provided for
 # convenience.
 DEBUG_DEFAULT = True
+
+# This is the maximum number of iterations that we let loopy belief propagation
+# run before cutting it off.
+LBP_MAX_ITERS = 50
+
+# This is the epsilon that we use for comparing floats to see if they are
+# equal.
+EPSILON = 0.0001
 
 
 # Classes
@@ -190,6 +201,20 @@ class Graph(object):
     def lbp(self):
         '''
         Loopy belief propagation.
+
+        FAQ:
+
+        -   Q: Do we have do updates in some specific order?
+            A: No.
+
+        -   Q: Can we intermix computing messages for Factor and RV nodes?
+            A: Yes.
+
+        -   Q: Do we have to make sure we only send messages on an edge once
+               messages from all other edges are received?
+            A: No. By sorting the nodes, we can kind of approximate this. But
+               this constraint is only something that matters if you want to
+               converge in 1 iteration on an acyclic graph.
         '''
         # Sketch of algorithm:
         # -------------------
@@ -199,15 +224,12 @@ class Graph(object):
         # note:
         # - every time message sent, normalize if too large or small
         #
-        # running (loop):
+        # Algo:
         # - initialize messages to 1
-        # - for each node in sorted list (fewest edges to most):
-        #     - send messages to neighbors (from which message wasn't received)
-        # - for each node in *reverse* sorted list (most edges to fewest):
-        #     - send messages to neighbors (from which message wasn't received)
-        # - for each node:
-        #     - ensure message was sent on every edge
-        # - check convergence of messages
+        # - until convergence or max iters reached:
+        #     - for each node in sorted list (fewest edges to most):
+        #         - compute outgoing messages to neighbors
+        #         - check convergence of messages
         #
         # after finished:
         # - compute marginals for rvs (I think?) and factors
@@ -217,7 +239,61 @@ class Graph(object):
         #   *Should* we do one or the other?
         #
         # - do factors get updated? or is it just messages?
-        pass
+        nodes = self._sorted_nodes()
+        self._init_messages(nodes)
+
+        # debug
+        print nodes
+
+        cur_iter, converged = 0, False
+        while cur_iter < LBP_MAX_ITERS and not converged:
+            # Bookkeeping
+            cur_iter += 1
+
+            # debug
+            self.print_messages(nodes)
+            print 'lbp iter:', cur_iter
+
+            # Comptue outgoing messages:
+            converged = True
+            for n in nodes:
+                n_converged = n.recompute_outgoing()
+                converged = converged and n_converged
+
+        # debug
+        print "lbp done"
+        self.print_messages(nodes)
+
+    def _sorted_nodes(self):
+        '''
+        Returns
+            [RV|Factor] sorted by # edges
+        '''
+        rvs = self._rvs.values()
+        facs = self._factors
+        nodes = rvs + facs
+        return sorted(nodes, key=lambda x: x.n_edges())
+
+    def _init_messages(self, nodes):
+        '''
+        Sets all messages to uniform.
+
+        Args:
+            nodes ([RV|Factor])
+        '''
+        for n in nodes:
+            n.init_lbp()
+
+    def print_messages(self, nodes):
+        '''
+        Prints (outgoing) messages for node in nodes.
+
+        Args:
+            nodes ([RV|Factor])
+        '''
+        print 'Current outgoing messages:'
+        for n in nodes:
+            n.print_messages()
 
     def print_stats(self):
         print 'Graph stats:'
@@ -251,6 +327,64 @@ class RV(object):
 
         # vars added later
         self._factors = []
+        self._outgoing = None
+
+    def __repr__(self):
+        return self.name
+
+    def init_lbp(self):
+        '''
+        Clears any existing messages and inits all messages to uniform.
+        '''
+        self._outgoing = [np.ones(self.n_opts) for f in self._factors]
+
+    def print_messages(self):
+        '''
+        Displays the current outgoing messages for this RV.
+        '''
+        for i, f in enumerate(self._factors):
+            print '\t', self, '->', f, '\t', self._outgoing[i]
+
+    def recompute_outgoing(self):
+        '''
+        TODO: Consider returning SSE for convergence checking.
+
+        Returns:
+            bool whether this RV converged
+        '''
+        # Good old safety.
+        if self.debug:
+            assert self._outgoing is not None, 'must call init_lbp() first'
+
+        # Save old for convergence check.
+        old_outgoing = self._outgoing[:]
+
+        # Get all incoming messages
+        incoming = []
+        total = np.ones(self.n_opts)
+        for i, f in enumerate(self._factors):
+            # TODO: Implement get_message_for in Factor.
+            m = f.get_message_for(self)
+            if self.debug:
+                assert m.shape == (self.n_opts,)
+            incoming += [m]
+
+        # Compute all outgoing messages and return whether convergence
+        # happened.
+        convg = True
+        for i in range(len(self._factors)):
+            self._outgoing[i] = total/incoming[i]
+            convg = convg and \
+                sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
+                self.n_opts
+        return convg
+
+    def n_edges(self):
+        '''
+        Returns:
+            int how many factors this RV is connected to
+        '''
+        return len(self._factors)
 
     def has_label(self, label):
         '''
@@ -334,10 +468,54 @@ class Factor(object):
         # add later using methods
         self._rvs = []
         self._belief = None
+        self._outgoing = None
 
         # set the rvs now
         for rv in rvs:
             self.attach(rv)
+
+    def __repr__(self):
+        return 'f(' + ', '.join([str(rv) for rv in self._rvs]) + ')'
+
+    def n_edges(self):
+        '''
+        Returns:
+            int how many RVs this Factor is connected to
+        '''
+        return len(self._rvs)
+
+    def init_lbp(self):
+        '''
+        Clears any existing messages and inits all messages to uniform.
+        '''
+        self._outgoing = [np.ones(r.n_opts) for r in self._rvs]
+
+    def get_message_for(self, rv):
+        '''
+        Gets the message for the random variable rv.
+
+        Returns:
+            np.ndarray of length rv.n_opts
+        '''
+        # TODO: (curspot) This.
+        return np.ones(rv.n_opts)
+
+    def recompute_outgoing(self):
+        '''
+        TODO: Consider returning SSE for convergence checking.
+
+        Returns:
+            bool whether this RV converged
+        '''
+        # TODO: This.
+        return True
+
+    def print_messages(self):
+        '''
+        Displays the current outgoing messages for this Factor.
+        '''
+        for i, rv in enumerate(self._rvs):
+            print '\t', self, '->', rv, '\t', self._outgoing[i]
 
     def attach(self, rv):
         '''
@@ -486,8 +664,39 @@ class Factor(object):
         return ret
 
 
-
 # TODO(mbforbes): Remove all the main stuff once you have tests for this.
+
+def pyfac_test():
+    '''
+    Some tests from pyfac
+    (https://github.com/mbforbes/pyfac/blob/master/graphTests.py).
+    '''
+
+    # rvs
+    a = RV('a', 3)
+    b = RV('b', 2)
+
+    # facs
+    f_b = Factor([b])
+    f_b.set_belief(np.array([0.3, 0.7]))
+    f_ab = Factor([a, b])
+    f_ab.set_belief(np.array([[0.2, 0.8], [0.4, 0.6], [0.1, 0.9]]))
+
+    # make graph
+    g = Graph()
+    g.add_rv(a)
+    g.add_rv(b)
+    g.add_factor(f_b)
+    g.add_factor(f_ab)
+
+    # print stuff
+    g.print_stats()
+    print 'Best joint:', g.bf_best_joint()
+
+    # (l)bp!
+    g.lbp()
+
+
 def main():
     # rvs
     r1 = RV('foo', 2)
@@ -514,6 +723,12 @@ def main():
     g.print_stats()
     print 'Joint for foo=2, bar=1:', g.joint({'foo': 1, 'bar': 1})
     print 'Best joint:', g.bf_best_joint()
+
+
+def main():
+    # playing()
+    pyfac_test()
+
 
 if __name__ == '__main__':
     main()
