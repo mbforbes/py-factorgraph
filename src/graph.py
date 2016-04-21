@@ -6,7 +6,7 @@ Author: mbforbes
 Current approach (order matters):
 -   (1) add RVs
 -   (2) add factors to connect them
--   (3) set beliefs on factors
+-   (3) set potentials on factors
 -   (4) run inference
 -   (5) compute marginals
 
@@ -41,7 +41,7 @@ Notes:
 # -----------------------------------------------------------------------------
 
 # Builtins
-import code  # code.interact(local=dict(globals(), **locals())) 
+import code  # code.interact(local=dict(globals(), **locals()))
 
 # 3rd party
 import numpy as np
@@ -62,10 +62,6 @@ DEBUG_DEFAULT = True
 # run before cutting it off.
 LBP_MAX_ITERS = 50
 
-# This is the epsilon that we use for comparing floats to see if they are
-# equal.
-EPSILON = 0.0001
-
 
 # Classes
 # -----------------------------------------------------------------------------
@@ -75,6 +71,15 @@ class Graph(object):
     Graph right now has no point, really (except bookkeeping all the RVs and
     factors, assuming we remember to add them), so this might be removed or
     functionality might be stuffed in here later.
+
+    NOTE: All RVs must have unique names.
+
+    TODO: Consider making Node base class which RV and Factor extend.
+
+    TODO: Consider making better methods for creating and adding RVs and
+    Factors all at once. Really shouldn't even need a graph object, but if
+    we're going to have one (it's kind of nice conceptually), it should have a
+    nicer interface.
     '''
 
     def __init__(self, debug=DEBUG_DEFAULT):
@@ -83,7 +88,8 @@ class Graph(object):
 
         # added later
         self._rvs = {}
-        self._factors = []  # TODO: Better data structure?
+        # TODO: Consider makign dict for speed.
+        self._factors = []
 
     def add_rv(self, rv):
         '''
@@ -159,7 +165,7 @@ class Graph(object):
     def bf_best_joint(self):
         '''
         Brute-force algorithm to compute the best joint assignment to the
-        factor graph given the current beliefs in the factors.
+        factor graph given the current potentials in the factors.
 
         This takes O(v^n) time, where
             v   is the # of possible assignments to each RV
@@ -302,13 +308,16 @@ class Graph(object):
 
 
 class RV(object):
+    '''
+    NOTE: All RVs must have unique names.
+    '''
 
     def __init__(self, name, n_opts, labels=[], debug=DEBUG_DEFAULT):
         '''
-        name (str)
+        name (str)                must be globally unique w.r.t. other RVs
         n_opts (int)              how many values it can take
-        labels ([str], opt)
-        debug (bool, opt)
+        labels ([str], opt)       opt names for each var. len must == n_opts
+        debug (bool, opt)         a gazillion asserts
         '''
         # validation
         if debug:
@@ -326,11 +335,15 @@ class RV(object):
         self.debug = debug
 
         # vars added later
+        # TODO: consider making dict for speed.
         self._factors = []
         self._outgoing = None
 
     def __repr__(self):
         return self.name
+
+    def __hash__(self):
+        return hash(self.name)
 
     def init_lbp(self):
         '''
@@ -363,8 +376,7 @@ class RV(object):
         incoming = []
         total = np.ones(self.n_opts)
         for i, f in enumerate(self._factors):
-            # TODO: Implement get_message_for in Factor.
-            m = f.get_message_for(self)
+            m = f.get_outgoing_for(self)
             if self.debug:
                 assert m.shape == (self.n_opts,)
             incoming += [m]
@@ -378,6 +390,24 @@ class RV(object):
                 sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
                 self.n_opts
         return convg
+
+    def get_outgoing_for(self, f):
+        '''
+        Gets outgoing message for factor f.
+
+        Args:
+            f (Factor)
+
+        Returns:
+            np.ndarray of length self.n_opts
+        '''
+        # Good old safety.
+        if self.debug:
+            assert self._outgoing is not None, 'must call init_lbp() first'
+
+        for i, fac in enumerate(self._factors):
+            if f == fac:
+                return self._outgoing[i]
 
     def n_edges(self):
         '''
@@ -454,6 +484,10 @@ class RV(object):
 
 
 class Factor(object):
+    '''
+    Invariant: RVs (self._rvs), dims of potential (self._potential), and outgoing
+    messages (self._outgoing) must refer to the same RVs in identical order.
+    '''
 
     def __init__(self, rvs, name='', debug=DEBUG_DEFAULT):
         '''
@@ -466,8 +500,9 @@ class Factor(object):
         self.debug = debug
 
         # add later using methods
+        # TODO: consider making dict for speed.
         self._rvs = []
-        self._belief = None
+        self._potential = None
         self._outgoing = None
 
         # set the rvs now
@@ -490,25 +525,79 @@ class Factor(object):
         '''
         self._outgoing = [np.ones(r.n_opts) for r in self._rvs]
 
-    def get_message_for(self, rv):
+    def get_outgoing_for(self, rv):
         '''
-        Gets the message for the random variable rv.
+        Gets the message for the random variable rv that this factor is
+        connected to. Prereq: this must be connected to rv. Duh. This code
+        doesn't check that.
+
+        Args:
+            rv (RV)
 
         Returns:
             np.ndarray of length rv.n_opts
         '''
-        # TODO: (curspot) This.
-        return np.ones(rv.n_opts)
+        # Good old safety.
+        if self.debug:
+            assert self._outgoing is not None, 'must call init_lbp() first'
+
+        for i, r in enumerate(self._rvs):
+            if r == rv:
+                return self._outgoing[i]
 
     def recompute_outgoing(self):
         '''
         TODO: Consider returning SSE for convergence checking.
 
         Returns:
-            bool whether this RV converged
+            bool whether this Factor converged
         '''
-        # TODO: This.
-        return True
+        # Good old safety.
+        if self.debug:
+            assert self._outgoing is not None, 'must call init_lbp() first'
+
+        # Save old for convergence check.
+        old_outgoing = self._outgoing[:]
+
+        # (Product:) Multiply RV messages into "belief".
+        incoming = []
+        belief = self._potential.copy()
+        for i, rv in enumerate(self._rvs):
+            m = rv.get_outgoing_for(self)
+            if self.debug:
+                assert m.shape == (rv.n_opts,)
+            # Reshape into the corect axis (for combining). For example, if our
+            # incoming message (And thus rv.n_opts) has length 3, our belief
+            # has 5 dimensions, and this is the 2nd (of 5) dimension(s), then
+            # we want the shape of our message to be (1, 3, 1, 1, 1), which
+            # means we'll use [1, -1, 1, 1, 1] to project our (3,1) array into
+            # the correct dimension.
+            #
+            # Thanks to stackoverflow:
+            # https://stackoverflow.com/questions/30031828/multiply-numpy-
+            #     ndarray-with-1d-array-along-a-given-axis
+            proj = np.ones(len(belief.shape), int)
+            proj[i] = -1
+            m_proj = m.reshape(proj)
+            incoming += [m_proj]
+            # Combine to save as we go
+            belief *= m_proj
+
+        # Divide out individual belief and (Sum:) add for marginal.
+        convg = True
+        all_idx = range(len(belief.shape))
+        for i, rv in enumerate(self._rvs):
+            rv_belief = belief / incoming[i]
+            # self._outgoing[i] = self.marginalize_for(rv_belief, rv)
+            axes = tuple(all_idx[:i] + all_idx[i+1:])
+            self._outgoing[i] = rv_belief.sum(axis=axes)
+            if self.debug:
+                assert self._outgoing[i].shape == (rv.n_opts, )
+            convg = convg and \
+                sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
+                rv.n_opts
+
+        return convg
 
     def print_messages(self):
         '''
@@ -519,7 +608,7 @@ class Factor(object):
 
     def attach(self, rv):
         '''
-        Call this to attach this factor to the RV rv. Clears any belief that
+        Call this to attach this factor to the RV rv. Clears any potential that
         has been set.
 
         rv (RV)
@@ -538,13 +627,13 @@ class Factor(object):
         # register rv here
         self._rvs += [rv]
 
-        # Clear belief as dimensions no longer match.
-        self._belief = None
+        # Clear potential as dimensions no longer match.
+        self._potential = None
 
-    def set_belief(self, b):
+    def set_potential(self, b):
         '''
-        Call this to set the belief for a factor. The passed belief b must
-        dimensionally match all attached RVs.
+        Call this to set the potential for a factor. The passed potential b
+        must dimensionally match all attached RVs.
 
         The dimensions can be a bit confusing. They iterate through the
         dimensions of the RVs in order.
@@ -557,7 +646,7 @@ class Factor(object):
             C {f, g}
 
         Now, say we have a facor which connects all of them (i.e. f(A,B,C)).
-        The dimensions of the belief for this factor are 3 x 2 x 2. You can
+        The dimensions of the potential for this factor are 3 x 2 x 2. You can
         imagine a 3d table of numbers:
 
                         a b c
@@ -573,8 +662,8 @@ class Factor(object):
         for f(A=a, B=d, C=f), and the middle-bottom cell of the top sheet
         contains the value for f(A=b, B=e, c=g).
 
-        The confusing thing (for me) is that a single belief of shape (3, 2, 2)
-        is represented in numpy as the following array:
+        The confusing thing (for me) is that a single potential of shape (3, 2,
+        2) is represented in numpy as the following array:
 
            [[[n, n],
              [n, n]],
@@ -618,12 +707,12 @@ class Factor(object):
         Args:
             b (np.array)
         '''
-        # check that the new belief has the correct shape
+        # check that the new potential has the correct shape
         if self.debug:
             # ensure overall dims match
             got = len(b.shape)
             want = len(self._rvs)
-            assert got == want, ('Belief %r has %d dims but needs %d' %
+            assert got == want, ('potential %r has %d dims but needs %d' %
                                  (b, got, want))
 
             # Ensure each dim matches.
@@ -631,16 +720,22 @@ class Factor(object):
                 got = d
                 want = self._rvs[i].n_opts
                 assert got == want, (
-                    'Belief %r dim #%d has %d opts but rv has %d opts' %
+                    'potential %r dim #%d has %d opts but rv has %d opts' %
                     (b, i+1, got, want))
 
         # Set it
-        self._belief = b
+        self._potential = b
 
     def eval(self, x):
         '''
-        If this factor is f_a, x may have assignments to more than x_a; that
-        is, it might be the full x.
+        Returns a single cell of the potential function.
+
+        Call this factor f_a. This returns f_a's potential function value for a
+        full assignment to X_a, which we call x_a.
+
+        Note that we accept x passed in, which is a full assignment to x. This
+        accepts either x (full assignment) or x_a (assignment that this factor
+        needs). This function only uses x_a [subset of] x.
 
         This checks (if debug is on) that all attached RVs have a valid
         assignment in x. Note that if this is begin called from Graph.joint(),
@@ -652,8 +747,8 @@ class Factor(object):
                 assert rv.name in x
                 assert rv.has_label(x[rv.name])
 
-        # slim down belief into desired value.
-        ret = self._belief
+        # slim down potential into desired value.
+        ret = self._potential
         for r in self._rvs:
             ret = ret[r.get_int_label(x[r.name])]
 
@@ -678,9 +773,9 @@ def pyfac_test():
 
     # facs
     f_b = Factor([b])
-    f_b.set_belief(np.array([0.3, 0.7]))
+    f_b.set_potential(np.array([0.3, 0.7]))
     f_ab = Factor([a, b])
-    f_ab.set_belief(np.array([[0.2, 0.8], [0.4, 0.6], [0.1, 0.9]]))
+    f_ab.set_potential(np.array([[0.2, 0.8], [0.4, 0.6], [0.1, 0.9]]))
 
     # make graph
     g = Graph()
@@ -706,11 +801,11 @@ def main():
     f = Factor([r1, r2])
     f_bar = Factor([r2])
 
-    # beliefs
+    # potentials
     b = np.array([[3, 2, 0.32453563], [2, 5, 5]])
-    f.set_belief(b)
+    f.set_potential(b)
     b2 = np.array([8.0, 2.0, 3.0])
-    f_bar.set_belief(b2)
+    f_bar.set_potential(b2)
 
     # add to a graph
     g = Graph()
