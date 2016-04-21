@@ -204,7 +204,7 @@ class Graph(object):
                 best_a = full_a
         return best_a, best_r
 
-    def lbp(self):
+    def lbp(self, normalize=False, max_iters=LBP_MAX_ITERS):
         '''
         Loopy belief propagation.
 
@@ -221,11 +221,14 @@ class Graph(object):
             A: No. By sorting the nodes, we can kind of approximate this. But
                this constraint is only something that matters if you want to
                converge in 1 iteration on an acyclic graph.
+
+        -   Q: Do factors' potential functions change during (L)BP?
+            A: No. Only the messages change.
         '''
         # Sketch of algorithm:
         # -------------------
         # preprocessing:
-        # - sort nodes (rvs? factors?) by number of edges
+        # - sort nodes by number of edges
         #
         # note:
         # - every time message sent, normalize if too large or small
@@ -236,40 +239,25 @@ class Graph(object):
         #     - for each node in sorted list (fewest edges to most):
         #         - compute outgoing messages to neighbors
         #         - check convergence of messages
-        #
-        # after finished:
-        # - compute marginals for rvs (I think?) and factors
-        #
-        # questions:
-        # - do we have to do all RVs then all Factors? Can we mix up the order?
-        #   *Should* we do one or the other?
-        #
-        # - do factors get updated? or is it just messages?
         nodes = self._sorted_nodes()
         self._init_messages(nodes)
 
-        # debug
-        print nodes
-
         cur_iter, converged = 0, False
-        while cur_iter < LBP_MAX_ITERS and not converged:
+        while cur_iter < max_iters and not converged:
             # Bookkeeping
             cur_iter += 1
 
             # debug
-            self.print_messages(nodes)
-            print 'lbp iter:', cur_iter
+            # self.print_messages(nodes)
+            # print 'lbp iter:', cur_iter
 
             # Comptue outgoing messages:
             converged = True
             for n in nodes:
-                n_converged = n.recompute_outgoing(normalize=False)
+                n_converged = n.recompute_outgoing(normalize=normalize)
                 converged = converged and n_converged
 
-        # debug
-        print "lbp done"
-        self.print_messages(nodes)
-        self.print_rv_marginals(normalize=True)
+        return cur_iter, converged
 
     def _sorted_nodes(self):
         '''
@@ -291,13 +279,18 @@ class Graph(object):
         for n in nodes:
             n.init_lbp()
 
-    def print_messages(self, nodes):
+    def print_sorted_nodes(self):
+        print self._sorted_nodes()
+
+    def print_messages(self, nodes=None):
         '''
         Prints (outgoing) messages for node in nodes.
 
         Args:
             nodes ([RV|Factor])
         '''
+        if nodes is None:
+            nodes = self._sorted_nodes()
         print 'Current outgoing messages:'
         for n in nodes:
             n.print_messages()
@@ -817,10 +810,10 @@ class Factor(object):
 
 # TODO(mbforbes): Remove all the main stuff once you have tests for this.
 
-def pyfac_test():
+def pyfac_toygraph_test():
     '''
-    Some tests from pyfac
-    (https://github.com/mbforbes/pyfac/blob/master/graphTests.py).
+    ToyGraph test from pyfac
+    (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
     '''
 
     # rvs
@@ -845,10 +838,21 @@ def pyfac_test():
     print 'Best joint:', g.bf_best_joint()
 
     # (l)bp!
-    g.lbp()
+    g.print_sorted_nodes()
+    iters, converged = g.lbp(normalize=True)
+    print '(L)BP ran for %d iterations; converged = %r' % (iters, converged)
+    g.print_messages()
+    g.print_rv_marginals(normalize=True)
 
+def pyfac_testgraph_test():
+    '''
+    TestGraph test from pyfac
+    (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
+    '''
+    # TODO: This.
+    pass
 
-def main():
+def playing():
     # rvs
     r1 = RV('foo', 2)
     r2 = RV('bar', 3)
@@ -878,7 +882,8 @@ def main():
 
 def main():
     # playing()
-    pyfac_test()
+    pyfac_toygraph_test()
+    pyfac_testgraph_test()
 
 
 if __name__ == '__main__':
