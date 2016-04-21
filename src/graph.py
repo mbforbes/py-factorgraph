@@ -263,12 +263,13 @@ class Graph(object):
             # Comptue outgoing messages:
             converged = True
             for n in nodes:
-                n_converged = n.recompute_outgoing()
+                n_converged = n.recompute_outgoing(normalize=False)
                 converged = converged and n_converged
 
         # debug
         print "lbp done"
         self.print_messages(nodes)
+        self.print_rv_marginals(normalize=True)
 
     def _sorted_nodes(self):
         '''
@@ -300,6 +301,39 @@ class Graph(object):
         print 'Current outgoing messages:'
         for n in nodes:
             n.print_messages()
+
+    def print_rv_marginals(self, normalize=False):
+        '''
+        Displays marginals for all RVs.
+
+        The marginal for RV i is computed as:
+
+            marg = prod_{neighboring f_j} message_{f_j -> i}
+
+        Args:
+            normalize (bool, opt) whether to turn this into a probability
+                distribution
+        '''
+        # Preamble
+        disp = 'Marginals for RVs'
+        if normalize:
+            disp += ' (normalized)'
+        disp += ':'
+        print disp
+
+        for name, rv in self._rvs.iteritems():
+            # Compute marginal
+            marg, _ = rv.get_belief()
+            if normalize:
+                marg /= sum(marg)
+
+            # Dispaly
+            print name
+            vals = range(rv.n_opts)
+            if len(rv.labels) > 0:
+                vals = rv.labels
+            for i in range(len(vals)):
+                print '\t', vals[i], '\t', marg[i]
 
     def print_stats(self):
         print 'Graph stats:'
@@ -358,9 +392,12 @@ class RV(object):
         for i, f in enumerate(self._factors):
             print '\t', self, '->', f, '\t', self._outgoing[i]
 
-    def recompute_outgoing(self):
+    def recompute_outgoing(self, normalize=False):
         '''
         TODO: Consider returning SSE for convergence checking.
+
+        TODO: Is normalizing each outgoing message at the very end the right
+              thing to do?
 
         Returns:
             bool whether this RV converged
@@ -372,20 +409,17 @@ class RV(object):
         # Save old for convergence check.
         old_outgoing = self._outgoing[:]
 
-        # Get all incoming messages
-        incoming = []
-        total = np.ones(self.n_opts)
-        for i, f in enumerate(self._factors):
-            m = f.get_outgoing_for(self)
-            if self.debug:
-                assert m.shape == (self.n_opts,)
-            incoming += [m]
+        # Get all incoming messages.
+        total, incoming = self.get_belief()
 
         # Compute all outgoing messages and return whether convergence
         # happened.
         convg = True
         for i in range(len(self._factors)):
-            self._outgoing[i] = total/incoming[i]
+            o = total/incoming[i]
+            if normalize:
+                o /= sum(o)
+            self._outgoing[i] = o
             convg = convg and \
                 sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
                 self.n_opts
@@ -408,6 +442,26 @@ class RV(object):
         for i, fac in enumerate(self._factors):
             if f == fac:
                 return self._outgoing[i]
+
+    def get_belief(self):
+        '''
+        Returns the belief (AKA marginal probability) of this RV, using its
+        current incoming messages.
+
+        Returns tuple(
+            marginal (np.ndarray)   of length self.n_opts         ,
+            incoming ([np.ndarray]) message for f in self._factors,
+        )
+        '''
+        incoming = []
+        total = np.ones(self.n_opts)
+        for i, f in enumerate(self._factors):
+            m = f.get_outgoing_for(self)
+            if self.debug:
+                assert m.shape == (self.n_opts,)
+            incoming += [m]
+            total *= m
+        return (total, incoming)
 
     def n_edges(self):
         '''
@@ -545,7 +599,7 @@ class Factor(object):
             if r == rv:
                 return self._outgoing[i]
 
-    def recompute_outgoing(self):
+    def recompute_outgoing(self, normalize=False):
         '''
         TODO: Consider returning SSE for convergence checking.
 
@@ -588,11 +642,13 @@ class Factor(object):
         all_idx = range(len(belief.shape))
         for i, rv in enumerate(self._rvs):
             rv_belief = belief / incoming[i]
-            # self._outgoing[i] = self.marginalize_for(rv_belief, rv)
             axes = tuple(all_idx[:i] + all_idx[i+1:])
-            self._outgoing[i] = rv_belief.sum(axis=axes)
+            o = rv_belief.sum(axis=axes)
             if self.debug:
                 assert self._outgoing[i].shape == (rv.n_opts, )
+            if normalize:
+                o /= sum(o)
+            self._outgoing[i] = o
             convg = convg and \
                 sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
                 rv.n_opts
