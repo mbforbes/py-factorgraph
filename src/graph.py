@@ -88,7 +88,7 @@ class Graph(object):
 
         # added later
         self._rvs = {}
-        # TODO: Consider makign dict for speed.
+        # TODO: Consider making dict for speed.
         self._factors = []
 
     def add_rv(self, rv):
