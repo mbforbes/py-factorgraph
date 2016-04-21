@@ -41,7 +41,7 @@ Notes:
 # -----------------------------------------------------------------------------
 
 # Builtins
-import code
+import code  # code.interact(local=dict(globals(), **locals())) 
 
 # 3rd party
 import numpy as np
