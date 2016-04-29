@@ -587,6 +587,8 @@ class Factor(object):
     Invariant: RVs (self._rvs), dims of potential (self._potential), and
     outgoing messages (self._outgoing) must refer to the same RVs in identical
     order.
+
+    NOTE: Factors DO NOT have to have unique names (RVs, however, do).
     '''
 
     def __init__(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
@@ -616,7 +618,8 @@ class Factor(object):
             self.set_potential(potential)
 
     def __repr__(self):
-        return 'f(' + ', '.join([str(rv) for rv in self._rvs]) + ')'
+        name = 'f' if len(self.name) == 0 else self.name
+        return name + '(' + ', '.join([str(rv) for rv in self._rvs]) + ')'
 
     def n_edges(self):
         '''
