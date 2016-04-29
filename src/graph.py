@@ -76,10 +76,9 @@ class Graph(object):
 
     TODO: Consider making Node base class which RV and Factor extend.
 
-    TODO: Consider making better methods for creating and adding RVs and
-    Factors all at once. Really shouldn't even need a graph object, but if
-    we're going to have one (it's kind of nice conceptually), it should have a
-    nicer interface.
+    TODO: convenience functions or modifications to consider (not worth making
+    unless I need them):
+        - getters (and setters?) for RVs and Factors
     '''
 
     def __init__(self, debug=DEBUG_DEFAULT):
@@ -91,6 +90,26 @@ class Graph(object):
         # TODO: Consider making dict for speed.
         self._factors = []
 
+    # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
+    #                 can use here to clean this up.
+    def rv(self, name, n_opts, labels=[], debug=DEBUG_DEFAULT):
+        '''
+        Creates an RV, adds it to this graph, and returns it. Convenience
+        function.
+
+        Args:
+            name (str)                must be globally unique w.r.t. other RVs
+            n_opts (int)              how many values it can take
+            labels ([str], opt)       opt names for each var. len == n_opts
+            debug (bool, opt)         a gazillion asserts
+
+        Returns:
+            RV
+        '''
+        rv = RV(name, n_opts, labels, debug)
+        self.add_rv(rv)
+        return rv
+
     def add_rv(self, rv):
         '''
         Node (RV|Factor)
@@ -100,6 +119,38 @@ class Graph(object):
             assert rv.name not in self._rvs
         # Add it.
         self._rvs[rv.name] = rv
+
+    # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
+    #                 can use here to clean this up.
+    def factor(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
+        '''
+        Creates a Factor, adds it to this graph, and returns it. Convenience
+        function.
+
+        Note that you can provide the name of an RV instead of the RV if you
+        like. And you can mix and match. Wow!
+
+        Args:
+            rvs ([RV|str])
+            name (str, opt)
+            potential (np.array, opt)
+            debug (bool, opt)
+
+        Returns:
+            Factor
+        '''
+        # Look up RVs if needed.
+        for i in range(len(rvs)):
+            if debug:
+                assert type(rvs[i]) is str or type(rvs[i]) is RV
+            if type(rvs[i]) is str:
+                rvs[i] = self._rvs[rvs[i]]
+            # This is just a coding sanity check.
+            assert type(rvs[i]) is RV
+
+        f = Factor(rvs, name, potential, debug)
+        self.add_factor(f)
+        return f
 
     def add_factor(self, factor):
         if self.debug:
@@ -341,10 +392,11 @@ class RV(object):
 
     def __init__(self, name, n_opts, labels=[], debug=DEBUG_DEFAULT):
         '''
-        name (str)                must be globally unique w.r.t. other RVs
-        n_opts (int)              how many values it can take
-        labels ([str], opt)       opt names for each var. len must == n_opts
-        debug (bool, opt)         a gazillion asserts
+        Args:
+            name (str)                must be globally unique w.r.t. other RVs
+            n_opts (int)              how many values it can take
+            labels ([str], opt)       opt names for each var. len == n_opts
+            debug (bool, opt)         a gazillion asserts
         '''
         # validation
         if debug:
@@ -536,11 +588,13 @@ class Factor(object):
     messages (self._outgoing) must refer to the same RVs in identical order.
     '''
 
-    def __init__(self, rvs, name='', debug=DEBUG_DEFAULT):
+    def __init__(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
         '''
-        rvs ([RV])
-        name (str, opt)
-        debug (bool, opt)
+        Args:
+            rvs ([RV])
+            name (str, opt)
+            potential (np.array, opt) See set_potential for more information.
+            debug (bool, opt)
         '''
         # at construction time
         self.name = name
@@ -555,6 +609,10 @@ class Factor(object):
         # set the rvs now
         for rv in rvs:
             self.attach(rv)
+
+        # set the potential if provided
+        if potential is not None:
+            self.set_potential(potential)
 
     def __repr__(self):
         return 'f(' + ', '.join([str(rv) for rv in self._rvs]) + ')'
@@ -679,9 +737,9 @@ class Factor(object):
         # Clear potential as dimensions no longer match.
         self._potential = None
 
-    def set_potential(self, b):
+    def set_potential(self, p):
         '''
-        Call this to set the potential for a factor. The passed potential b
+        Call this to set the potential for a factor. The passed potential p
         must dimensionally match all attached RVs.
 
         The dimensions can be a bit confusing. They iterate through the
@@ -754,26 +812,26 @@ class Factor(object):
             e | n n
 
         Args:
-            b (np.array)
+            p (np.array)
         '''
         # check that the new potential has the correct shape
         if self.debug:
             # ensure overall dims match
-            got = len(b.shape)
+            got = len(p.shape)
             want = len(self._rvs)
             assert got == want, ('potential %r has %d dims but needs %d' %
-                                 (b, got, want))
+                                 (p, got, want))
 
             # Ensure each dim matches.
-            for i, d in enumerate(b.shape):
+            for i, d in enumerate(p.shape):
                 got = d
                 want = self._rvs[i].n_opts
                 assert got == want, (
                     'potential %r dim #%d has %d opts but rv has %d opts' %
-                    (b, i+1, got, want))
+                    (p, i+1, got, want))
 
         # Set it
-        self._potential = b
+        self._potential = p
 
     def eval(self, x):
         '''
@@ -834,6 +892,7 @@ def pyfac_toygraph_test():
     g.add_factor(f_ab)
 
     # print stuff
+    print 'TOY graph'
     g.print_stats()
     print 'Best joint:', g.bf_best_joint()
 
@@ -841,16 +900,73 @@ def pyfac_toygraph_test():
     g.print_sorted_nodes()
     iters, converged = g.lbp(normalize=True)
     print '(L)BP ran for %d iterations; converged = %r' % (iters, converged)
+    # Print and compare to pyfac
     g.print_messages()
     g.print_rv_marginals(normalize=True)
+
 
 def pyfac_testgraph_test():
     '''
     TestGraph test from pyfac
     (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
     '''
-    # TODO: This.
-    pass
+    # graph
+    g = Graph()
+
+    # rvs
+    g.rv('a', 2)
+    g.rv('b', 3)
+    g.rv('c', 4)
+    g.rv('d', 5)
+
+    # factors
+    g.factor(['a'], potential=np.array([0.3, 0.7]))
+    # TODO(mbforbes): Try adding the factor the other way around (a, b) and
+    # ensuring equivalent.
+    g.factor(['b', 'a'], potential=np.array([
+            [0.2, 0.8],
+            [0.4, 0.6],
+            [0.1, 0.9],
+    ]))
+    g.factor(['d', 'c', 'a'], potential=np.array([
+        [
+            [3., 1.],
+            [1.2, 0.4],
+            [0.1, 0.9],
+            [0.1, 0.9],
+        ],
+        [
+            [11., 9.],
+            [8.8, 9.4],
+            [6.4, 0.1],
+            [8.8, 9.4],
+        ],
+        [
+            [3., 2.],
+            [2., 2.],
+            [2., 2.],
+            [3., 2.],
+        ],
+        [
+            [0.3, 0.7],
+            [0.44, 0.56],
+            [0.37, 0.63],
+            [0.44, 0.56],
+        ],
+        [
+            [0.2, 0.1],
+            [0.64, 0.44],
+            [0.37, 0.63],
+            [0.2, 0.1],
+        ],
+    ]))
+
+    # Print and compare to pyfac
+    print 'TEST graph'
+    iters, converged = g.lbp(normalize=True)
+    print '(L)BP ran for %d iterations; converged = %r' % (iters, converged)
+    g.print_messages()
+    g.print_rv_marginals(normalize=True)
 
 def playing():
     # rvs
@@ -881,7 +997,7 @@ def playing():
 
 
 def main():
-    # playing()
+    playing()
     pyfac_toygraph_test()
     pyfac_testgraph_test()
 
