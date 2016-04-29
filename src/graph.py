@@ -584,8 +584,9 @@ class RV(object):
 
 class Factor(object):
     '''
-    Invariant: RVs (self._rvs), dims of potential (self._potential), and outgoing
-    messages (self._outgoing) must refer to the same RVs in identical order.
+    Invariant: RVs (self._rvs), dims of potential (self._potential), and
+    outgoing messages (self._outgoing) must refer to the same RVs in identical
+    order.
     '''
 
     def __init__(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
@@ -967,6 +968,7 @@ def pyfac_testgraph_test():
     print '(L)BP ran for %d iterations; converged = %r' % (iters, converged)
     g.print_messages()
     g.print_rv_marginals(normalize=True)
+
 
 def playing():
     # rvs
