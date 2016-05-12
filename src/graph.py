@@ -110,9 +110,20 @@ class Graph(object):
         self.add_rv(rv)
         return rv
 
+    def has_rv(self, rv_s):
+        '''
+        Args:
+            rv_s (str): Potential name of RV
+
+        Returns:
+            bool
+        '''
+        return rv_s in self._rvs
+
     def add_rv(self, rv):
         '''
-        Node (RV|Factor)
+        Args:
+            rv (RV)
         '''
         # Check RV with same name not already added.
         if self.debug:
@@ -142,8 +153,8 @@ class Graph(object):
         # Look up RVs if needed.
         for i in range(len(rvs)):
             if debug:
-                assert type(rvs[i]) is str or type(rvs[i]) is RV
-            if type(rvs[i]) is str:
+                assert type(rvs[i]) in [str, unicode, RV]
+            if type(rvs[i]) in [str, unicode]:
                 rvs[i] = self._rvs[rvs[i]]
             # This is just a coding sanity check.
             assert type(rvs[i]) is RV
@@ -160,7 +171,7 @@ class Graph(object):
             # Check factor connecting to exactly the same set of nodes doesn't
             # already exist. This isn't mandated by factor graphs by any means,
             # but it's a heuristic to prevent bugs; if you're adding factors
-            # that connect the same set of ndoes, you're either doing something
+            # that connect the same set of nodes, you're either doing something
             # weird (and can probably reformulate your graph structure to avoid
             # this duplication), or you have a bug.
             factor_rvs = sorted(factor._rvs)
@@ -402,7 +413,7 @@ class RV(object):
         if debug:
             # labels must be [str] if provided
             for l in labels:
-                assert type(l) is str
+                assert type(l) in [str, unicode]
 
             # must have n_opts labels if provided
             assert len(labels) == 0 or len(labels) == n_opts
@@ -534,8 +545,8 @@ class RV(object):
         else:
             # Tracking strs only. Provided label can be int or str.
             if self.debug:
-                assert type(label) is int or type(label) is str
-            if type(label) is str:
+                assert type(label) in [int, str, unicode]
+            if type(label) in [str, unicode]:
                 return label in self.labels
             # Default: int
             return label < self.n_opts
