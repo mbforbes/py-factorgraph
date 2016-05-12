@@ -266,7 +266,7 @@ class Graph(object):
                 best_a = full_a
         return best_a, best_r
 
-    def lbp(self, normalize=False, max_iters=LBP_MAX_ITERS):
+    def lbp(self, normalize=False, max_iters=LBP_MAX_ITERS, progress=False):
         '''
         Loopy belief propagation.
 
@@ -309,9 +309,9 @@ class Graph(object):
             # Bookkeeping
             cur_iter += 1
 
-            # debug
-            # self.print_messages(nodes)
-            # print 'lbp iter:', cur_iter
+            if progress:
+                # self.print_messages(nodes)
+                print '\titeration %d / %d (max)' % (cur_iter, max_iters)
 
             # Comptue outgoing messages:
             converged = True
@@ -357,15 +357,16 @@ class Graph(object):
         for n in nodes:
             n.print_messages()
 
-    def print_rv_marginals(self, normalize=False):
+    def print_rv_marginals(self, rvs=None, normalize=False):
         '''
-        Displays marginals for all RVs.
+        Displays marginals for rvs.
 
         The marginal for RV i is computed as:
 
             marg = prod_{neighboring f_j} message_{f_j -> i}
 
         Args:
+            rvs ([RV], opt): Displays all if None
             normalize (bool, opt) whether to turn this into a probability
                 distribution
         '''
@@ -376,8 +377,12 @@ class Graph(object):
         disp += ':'
         print disp
 
-        for name, rv in self._rvs.iteritems():
+        if rvs is None:
+            rvs = self._rvs.values()
+
+        for rv in rvs:
             # Compute marginal
+            name = str(rv)
             marg, _ = rv.get_belief()
             if normalize:
                 marg /= sum(marg)
