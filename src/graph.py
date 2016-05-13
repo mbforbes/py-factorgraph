@@ -131,6 +131,21 @@ class Graph(object):
         # Add it.
         self._rvs[rv.name] = rv
 
+    def remove_loner_rvs(self):
+        '''
+        Removes RVs from the graph that have no factors attached to them.
+
+        Returns:
+            int number removed
+        '''
+        removed = 0
+        names = self._rvs.keys()
+        for name in names:
+            if self._rvs[name].n_edges() == 0:
+                del self._rvs[name]
+                removed += 1
+        return removed
+
     # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
     #                 can use here to clean this up.
     def factor(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
