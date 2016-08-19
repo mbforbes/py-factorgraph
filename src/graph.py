@@ -42,6 +42,7 @@ Notes:
 
 # Builtins
 import code  # code.interact(local=dict(globals(), **locals()))
+import signal
 
 # 3rd party
 import numpy as np
@@ -61,6 +62,21 @@ DEBUG_DEFAULT = True
 # This is the maximum number of iterations that we let loopy belief propagation
 # run before cutting it off.
 LBP_MAX_ITERS = 50
+
+# Otherwise we'd just make some kinda class to do this anyway.
+E_STOP = False
+
+
+# Functions
+# -----------------------------------------------------------------------------
+
+# Let the user Ctrl-C at any time to stop.
+def signal_handler(signal, frame):
+    print 'Ctrl-C pressed; stopping early...'
+    global E_STOP
+    E_STOP = True
+signal.signal(signal.SIGINT, signal_handler)
+
 
 
 # Classes
@@ -320,7 +336,7 @@ class Graph(object):
         self._init_messages(nodes)
 
         cur_iter, converged = 0, False
-        while cur_iter < max_iters and not converged:
+        while cur_iter < max_iters and not converged and not E_STOP:
             # Bookkeeping
             cur_iter += 1
 
@@ -787,7 +803,7 @@ class Factor(object):
             B {d, e}
             C {f, g}
 
-        Now, say we have a facor which connects all of them (i.e. f(A,B,C)).
+        Now, say we have a factor which connects all of them (i.e. f(A,B,C)).
         The dimensions of the potential for this factor are 3 x 2 x 2. You can
         imagine a 3d table of numbers:
 
