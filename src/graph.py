@@ -388,6 +388,36 @@ class Graph(object):
         for n in nodes:
             n.print_messages()
 
+    def rv_marginals(self, rvs=None, normalize=False):
+        '''
+        Gets marginals for rvs.
+
+        The marginal for RV i is computed as:
+
+            marg = prod_{neighboring f_j} message_{f_j -> i}
+
+        Args:
+            rvs ([RV], opt): Displays all if None
+            normalize (bool, opt) whether to turn this into a probability
+                distribution
+
+        Returns:
+            [(RV, np.ndarray)]
+        '''
+        if rvs is None:
+            rvs = self._rvs.values()
+
+        tuples = []
+        for rv in rvs:
+            # Compute marginal
+            name = str(rv)
+            marg, _ = rv.get_belief()
+            if normalize:
+                marg /= sum(marg)
+
+            tuples += [(rv, marg)]
+        return tuples
+
     def print_rv_marginals(self, rvs=None, normalize=False):
         '''
         Displays marginals for rvs.
@@ -408,18 +438,12 @@ class Graph(object):
         disp += ':'
         print disp
 
-        if rvs is None:
-            rvs = self._rvs.values()
+        # Extract
+        tuples = self.rv_marginals(rvs, normalize)
 
-        for rv in rvs:
-            # Compute marginal
-            name = str(rv)
-            marg, _ = rv.get_belief()
-            if normalize:
-                marg /= sum(marg)
-
-            # Dispaly
-            print name
+        # Display
+        for rv, marg in tuples:
+            print str(rv)
             vals = range(rv.n_opts)
             if len(rv.labels) > 0:
                 vals = rv.labels
