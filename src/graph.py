@@ -42,6 +42,7 @@ Notes:
 
 # Builtins
 import code  # code.interact(local=dict(globals(), **locals()))
+import logging
 import signal
 
 # 3rd party
@@ -50,6 +51,8 @@ import numpy as np
 
 # Constants
 # -----------------------------------------------------------------------------
+
+logger = logging.getLogger(__name__)
 
 # Settings
 
@@ -72,7 +75,7 @@ E_STOP = False
 
 # Let the user Ctrl-C at any time to stop.
 def signal_handler(signal, frame):
-    print 'Ctrl-C pressed; stopping early...'
+    logger.info('Ctrl-C pressed; stopping early...')
     global E_STOP
     E_STOP = True
 signal.signal(signal.SIGINT, signal_handler)
@@ -146,6 +149,15 @@ class Graph(object):
             assert rv.name not in self._rvs
         # Add it.
         self._rvs[rv.name] = rv
+
+    def get_rvs(self):
+        '''
+        Returns COPY of rvs.
+
+        Returns:
+            {str: RV}
+        '''
+        return self._rvs.copy()
 
     def remove_loner_rvs(self):
         '''
@@ -342,7 +354,7 @@ class Graph(object):
 
             if progress:
                 # self.print_messages(nodes)
-                print '\titeration %d / %d (max)' % (cur_iter, max_iters)
+                logger.debug('\titeration %d / %d (max)', cur_iter, max_iters)
 
             # Comptue outgoing messages:
             converged = True
@@ -450,10 +462,10 @@ class Graph(object):
             for i in range(len(vals)):
                 print '\t', vals[i], '\t', marg[i]
 
-    def print_stats(self):
-        print 'Graph stats:'
-        print '\t%d RVs' % (len(self._rvs))
-        print '\t%d factors' % (len(self._factors))
+    def debug_stats(self):
+        logger.debug('Graph stats:')
+        logger.debug('\t%d RVs', len(self._rvs))
+        logger.debug('\t%d factors', len(self._factors))
 
 
 class RV(object):
@@ -461,7 +473,7 @@ class RV(object):
     NOTE: All RVs must have unique names.
     '''
 
-    def __init__(self, name, n_opts, labels=[], debug=DEBUG_DEFAULT):
+    def __init__(self, name, n_opts, labels=[], meta={}, debug=DEBUG_DEFAULT):
         '''
         Args:
             name (str)                must be globally unique w.r.t. other RVs
@@ -483,6 +495,7 @@ class RV(object):
         self.n_opts = n_opts
         self.labels = labels
         self.debug = debug
+        self.meta = meta  # metadata: custom data added / manipulated by user
 
         # vars added later
         # TODO: consider making dict for speed.
