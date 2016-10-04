@@ -176,7 +176,7 @@ class Graph(object):
 
     # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
     #                 can use here to clean this up.
-    def factor(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
+    def factor(self, rvs, name='', potential=None, meta={}, debug=DEBUG_DEFAULT):
         '''
         Creates a Factor, adds it to this graph, and returns it. Convenience
         function.
@@ -202,7 +202,7 @@ class Graph(object):
             # This is just a coding sanity check.
             assert type(rvs[i]) is RV
 
-        f = Factor(rvs, name, potential, debug)
+        f = Factor(rvs, name, potential, meta, debug)
         self.add_factor(f)
         return f
 
@@ -508,6 +508,24 @@ class RV(object):
     def __hash__(self):
         return hash(self.name)
 
+    def get_factors(self):
+        '''
+        Returns original references
+
+        Returns:
+            [Factor]
+        '''
+        return self._factors
+
+    def get_outgoing(self):
+        '''
+        Returns COPY
+
+        Returns:
+            [np.ndarray]
+        '''
+        return self._outgoing[:]
+
     def init_lbp(self):
         '''
         Clears any existing messages and inits all messages to uniform.
@@ -675,7 +693,7 @@ class Factor(object):
     NOTE: Factors DO NOT have to have unique names (RVs, however, do).
     '''
 
-    def __init__(self, rvs, name='', potential=None, debug=DEBUG_DEFAULT):
+    def __init__(self, rvs, name='', potential=None, meta={}, debug=DEBUG_DEFAULT):
         '''
         Args:
             rvs ([RV])
@@ -686,6 +704,7 @@ class Factor(object):
         # at construction time
         self.name = name
         self.debug = debug
+        self.meta = meta  # metadata: custom data added / manipulated by user
 
         # add later using methods
         # TODO: consider making dict for speed.
@@ -712,11 +731,36 @@ class Factor(object):
         '''
         return len(self._rvs)
 
+    def get_potential(self):
+        '''
+        Returns:
+            np.ndarray
+        '''
+        return self._potential
+
+    def get_rvs(self):
+        '''
+        Returns original references
+
+        Returns
+            [RV]
+        '''
+        return self._rvs
+
     def init_lbp(self):
         '''
         Clears any existing messages and inits all messages to uniform.
         '''
         self._outgoing = [np.ones(r.n_opts) for r in self._rvs]
+
+    def get_outgoing(self):
+        '''
+        Returns COPY of outgoing.
+
+        Returns:
+            [np.ndarray] where element i is of shape get_rvs()[i].n_opts
+        '''
+        return self._outgoing[:]
 
     def get_outgoing_for(self, rv):
         '''
@@ -759,7 +803,7 @@ class Factor(object):
             m = rv.get_outgoing_for(self)
             if self.debug:
                 assert m.shape == (rv.n_opts,)
-            # Reshape into the corect axis (for combining). For example, if our
+            # Reshape into the correct axis (for combining). For example, if our
             # incoming message (And thus rv.n_opts) has length 3, our belief
             # has 5 dimensions, and this is the 2nd (of 5) dimension(s), then
             # we want the shape of our message to be (1, 3, 1, 1, 1), which
