@@ -111,7 +111,7 @@ class Graph(object):
 
     # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
     #                 can use here to clean this up.
-    def rv(self, name, n_opts, labels=[], debug=DEBUG_DEFAULT):
+    def rv(self, name, n_opts, labels=[], meta={}, debug=DEBUG_DEFAULT):
         '''
         Creates an RV, adds it to this graph, and returns it. Convenience
         function.
@@ -125,7 +125,7 @@ class Graph(object):
         Returns:
             RV
         '''
-        rv = RV(name, n_opts, labels, debug)
+        rv = RV(name, n_opts, labels, meta, debug)
         self.add_rv(rv)
         return rv
 
@@ -144,6 +144,7 @@ class Graph(object):
         Args:
             rv (RV)
         '''
+        rv.meta['pruned'] = False
         # Check RV with same name not already added.
         if self.debug:
             assert rv.name not in self._rvs
@@ -152,12 +153,21 @@ class Graph(object):
 
     def get_rvs(self):
         '''
-        Returns COPY of rvs.
+        Returns references to actual RVs.
 
         Returns:
             {str: RV}
         '''
-        return self._rvs.copy()
+        return self._rvs
+
+    def get_factors(self):
+        '''
+        Returns references to actual Factors.
+
+        Returns:
+            [Factor]
+        '''
+        return self._factors
 
     def remove_loner_rvs(self):
         '''
@@ -170,6 +180,7 @@ class Graph(object):
         names = self._rvs.keys()
         for name in names:
             if self._rvs[name].n_edges() == 0:
+                self._rvs[name].meta['pruned'] = True
                 del self._rvs[name]
                 removed += 1
         return removed
