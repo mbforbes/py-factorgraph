@@ -320,7 +320,7 @@ class Graph(object):
                 best_a = full_a
         return best_a, best_r
 
-    def lbp(self, normalize=False, max_iters=LBP_MAX_ITERS, progress=False):
+    def lbp(self, init=True, normalize=False, max_iters=LBP_MAX_ITERS, progress=False):
         '''
         Loopy belief propagation.
 
@@ -355,8 +355,12 @@ class Graph(object):
         #     - for each node in sorted list (fewest edges to most):
         #         - compute outgoing messages to neighbors
         #         - check convergence of messages
+
         nodes = self._sorted_nodes()
-        self._init_messages(nodes)
+
+        # Init if needed. (Don't if e.g. external func is managing iterations)
+        if init:
+            self.init_messages(nodes)
 
         cur_iter, converged = 0, False
         while cur_iter < max_iters and not converged and not E_STOP:
@@ -385,13 +389,15 @@ class Graph(object):
         nodes = rvs + facs
         return sorted(nodes, key=lambda x: x.n_edges())
 
-    def _init_messages(self, nodes):
+    def init_messages(self, nodes=None):
         '''
         Sets all messages to uniform.
 
         Args:
-            nodes ([RV|Factor])
+            nodes ([RV|Factor], default=None) if None, uses all nodes
         '''
+        if nodes is None:
+            nodes = self._sorted_nodes()
         for n in nodes:
             n.init_lbp()
 
