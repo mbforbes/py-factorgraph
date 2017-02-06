@@ -247,10 +247,15 @@ class Graph(object):
             # that connect the same set of nodes, you're either doing something
             # weird (and can probably reformulate your graph structure to avoid
             # this duplication), or you have a bug.
-            factor_rvs = sorted(factor._rvs)
-            for f in self._factors:
-                rvs = sorted(f._rvs)
-                assert factor_rvs != rvs
+            #
+            # NOTE(mbforbes): Disabling because I actually do want to be able to
+            # do this. Feel free to open GitHub issue for discussion if you're
+            # reading this and would like the assert back on.
+            # factor_rvs = sorted(factor._rvs)
+            # for f in self._factors:
+            #     rvs = sorted(f._rvs)
+            #     assert factor_rvs != rvs, 'Trying to add factor "%r" but factor ' \
+            #         'with the same RVs ("%r") already exists.' % (factor, f)
         # Add it.
         self._factors += [factor]
 
@@ -389,9 +394,6 @@ class Graph(object):
             if progress:
                 # self.print_messages(nodes)
                 logger.debug('\titeration %d / %d (max)', cur_iter, max_iters)
-
-            # debugging
-            code.interact(local=dict(globals(), **locals()))
 
             # Comptue outgoing messages:
             converged = True
