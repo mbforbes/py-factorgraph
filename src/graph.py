@@ -81,6 +81,25 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 
+def divide_safezero(a, b):
+    '''
+    Divies a by b, then turns nans and infs into 0, so all division by 0 becomes
+    0.
+
+    Args:
+        a (np.ndarray)
+        b (np.ndarray|int|float)
+
+    Returns:
+        np.ndarray
+    '''
+    # deal with divide-by-zero: turn x/0 (inf) into 0, and turn 0/0 (nan) into
+    # 0.
+    c = a / b
+    c[c == np.inf] = 0.0
+    c = np.nan_to_num(c)
+    return c
+
 
 # Classes
 # -----------------------------------------------------------------------------
@@ -371,6 +390,9 @@ class Graph(object):
                 # self.print_messages(nodes)
                 logger.debug('\titeration %d / %d (max)', cur_iter, max_iters)
 
+            # debugging
+            code.interact(local=dict(globals(), **locals()))
+
             # Comptue outgoing messages:
             converged = True
             for n in nodes:
@@ -580,9 +602,9 @@ class RV(object):
         # happened.
         convg = True
         for i in range(len(self._factors)):
-            o = total/incoming[i]
+            o = divide_safezero(total, incoming[i])
             if normalize:
-                o /= sum(o)
+                o = divide_safezero(o, sum(o))
             self._outgoing[i] = o
             convg = convg and \
                 sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
@@ -841,13 +863,13 @@ class Factor(object):
         convg = True
         all_idx = range(len(belief.shape))
         for i, rv in enumerate(self._rvs):
-            rv_belief = belief / incoming[i]
+            rv_belief = divide_safezero(belief, incoming[i])
             axes = tuple(all_idx[:i] + all_idx[i+1:])
             o = rv_belief.sum(axis=axes)
             if self.debug:
                 assert self._outgoing[i].shape == (rv.n_opts, )
             if normalize:
-                o /= sum(o)
+                o = divide_safezero(o, sum(o))
             self._outgoing[i] = o
             convg = convg and \
                 sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
