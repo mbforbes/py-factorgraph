@@ -1,4 +1,5 @@
-# py-fg
+# py-factorgraph
+
 Factor graph and loopy belief propagation in Python
 
 # TODO
