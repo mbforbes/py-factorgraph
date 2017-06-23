@@ -14,20 +14,94 @@ author: mbforbes
 import numpy as np
 
 # Local
-from .context import factorgraph
+from .context import factorgraph as fg
+
+
+# Helpers
+# -----------------------------------------------------------------------------
+
+def compare_marginals_to_ref(g, ref):
+    """
+    Runs LBP on a graph, extracts marginals, and asserts that the results are
+    equal (close) to the reference values provided.
+
+    Args:
+        g (fg.Graph)
+        ref ({str: [float]})
+    """
+    # run lbp
+    iters, converged = g.lbp(normalize=True)
+    assert converged, 'LBP did not converge!'
+
+    # get marginals and stringify (uses names)
+    marginals = {str(rv): vals for rv, vals in g.rv_marginals(normalize=True)}
+
+
+    # check all values in reference match those in the computed marginals
+    for var_name, values in ref.iteritems():
+        for i in range(len(values)):
+            assert np.isclose(values[i], marginals[var_name][i])
+
+    # to ensure extra values aren't prodcued, check the reverse: that all
+    # values in computed marginals match those in the reference
+    for var_name, values in marginals.iteritems():
+        for i in range(len(values)):
+            assert np.isclose(values[i], marginals[var_name][i])
 
 
 # Tests
 # -----------------------------------------------------------------------------
 
+def test_pyfac_toygraph():
+    """
+    ToyGraph test from pyfac
+    (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
+
+    Small note: this test uses explicit construction (make `RV`s explicitly,
+    then make `Factor`s explicitly, then create graph and add them to it).
+    """
+    # rvs
+    a = fg.RV('a', 3)
+    b = fg.RV('b', 2)
+
+    # facs
+    f_b = fg.Factor([b])
+    f_b.set_potential(np.array([0.3, 0.7]))
+    f_ab = fg.Factor([a, b])
+    f_ab.set_potential(np.array([[0.2, 0.8], [0.4, 0.6], [0.1, 0.9]]))
+
+    # make graph
+    g = fg.Graph()
+    g.add_rv(a)
+    g.add_rv(b)
+    g.add_factor(f_b)
+    g.add_factor(f_ab)
+
+    ref = {
+        'a': [
+            0.34065934,
+            0.2967033,
+            0.36263736,
+        ], 'b': [
+            0.11538462,
+            0.88461538,
+        ],
+    }
+
+    # heavy lifting (lbp, marginals, reference comparison)
+    compare_marginals_to_ref(g, ref)
+
+
 def test_pyfac_testgraph():
     """
     TestGraph test from pyfac
     (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
-    """
 
+    Small note: this test uses implicit construction (make `RV`s and `Factor`s
+    by calling graph.rv(...) and graph.factor(...)).
+    """
     # start an empty graph
-    g = factorgraph.Graph()
+    g = fg.Graph()
 
     # rvs
     g.rv('a', 2)
@@ -75,12 +149,6 @@ def test_pyfac_testgraph():
         ],
     ]))
 
-    # Assert equal to pyfac reference values
-    iters, converged = g.lbp(normalize=True)
-    assert converged, 'LBP did not converge!'
-
-    # get marginals and stringify (uses names)
-    marginals = {str(rv): vals for rv, vals in g.rv_marginals(normalize=True)}
 
     # ground truth (thanks pyfac!)
     ref = {
@@ -105,13 +173,5 @@ def test_pyfac_testgraph():
         ],
     }
 
-    # check all values in reference match those in the computed marginals
-    for var_name, values in ref.iteritems():
-        for i in range(len(values)):
-            assert np.isclose(values[i], marginals[var_name][i])
-
-    # to ensure extra values aren't prodcued, check the reverse: that all
-    # values in computed marginals match those in the reference
-    for var_name, values in marginals.iteritems():
-        for i in range(len(values)):
-            assert np.isclose(values[i], marginals[var_name][i])
+    # heavy lifting (lbp, marginals, reference comparison)
+    compare_marginals_to_ref(g, ref)

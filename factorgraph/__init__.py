@@ -1,1 +1,1 @@
-from .factorgraph import Graph
+from .factorgraph import *

@@ -1,7 +1,5 @@
 '''
-Implementation of factor graph.
-
-Author: mbforbes
+Implementation of factor graph and (loopy) belief propagation algorithm.
 
 Current approach (order matters):
 -   (1) add RVs
@@ -35,6 +33,8 @@ Notes:
                         it will "ignore" the other x_i in x that aren't in x_a.
                         Thus, we write f_a(x_a) for convenience to show exactly
                         what f_a operates on.
+
+author: mbforbes
 '''
 
 # Imports
@@ -1037,144 +1037,3 @@ class Factor(object):
             assert type(ret) is not np.ndarray
 
         return ret
-
-
-# TODO(mbforbes): Remove all the main stuff once you have tests for this.
-
-def pyfac_toygraph_test():
-    '''
-    ToyGraph test from pyfac
-    (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
-    '''
-
-    # rvs
-    a = RV('a', 3)
-    b = RV('b', 2)
-
-    # facs
-    f_b = Factor([b])
-    f_b.set_potential(np.array([0.3, 0.7]))
-    f_ab = Factor([a, b])
-    f_ab.set_potential(np.array([[0.2, 0.8], [0.4, 0.6], [0.1, 0.9]]))
-
-    # make graph
-    g = Graph()
-    g.add_rv(a)
-    g.add_rv(b)
-    g.add_factor(f_b)
-    g.add_factor(f_ab)
-
-    # print stuff
-    print 'TOY graph'
-    g.print_stats()
-    print 'Best joint:', g.bf_best_joint()
-
-    # (l)bp!
-    g.print_sorted_nodes()
-    iters, converged = g.lbp(normalize=True)
-    print '(L)BP ran for %d iterations; converged = %r' % (iters, converged)
-    # Print and compare to pyfac
-    g.print_messages()
-    g.print_rv_marginals(normalize=True)
-
-
-def pyfac_testgraph_test():
-    '''
-    TestGraph test from pyfac
-    (https://github.com/rdlester/pyfac/blob/master/graphTests.py).
-    '''
-    # graph
-    g = Graph()
-
-    # rvs
-    g.rv('a', 2)
-    g.rv('b', 3)
-    g.rv('c', 4)
-    g.rv('d', 5)
-
-    # factors
-    g.factor(['a'], potential=np.array([0.3, 0.7]))
-    # TODO(mbforbes): Try adding the factor the other way around (a, b) and
-    # ensuring equivalent.
-    g.factor(['b', 'a'], potential=np.array([
-            [0.2, 0.8],
-            [0.4, 0.6],
-            [0.1, 0.9],
-    ]))
-    g.factor(['d', 'c', 'a'], potential=np.array([
-        [
-            [3., 1.],
-            [1.2, 0.4],
-            [0.1, 0.9],
-            [0.1, 0.9],
-        ],
-        [
-            [11., 9.],
-            [8.8, 9.4],
-            [6.4, 0.1],
-            [8.8, 9.4],
-        ],
-        [
-            [3., 2.],
-            [2., 2.],
-            [2., 2.],
-            [3., 2.],
-        ],
-        [
-            [0.3, 0.7],
-            [0.44, 0.56],
-            [0.37, 0.63],
-            [0.44, 0.56],
-        ],
-        [
-            [0.2, 0.1],
-            [0.64, 0.44],
-            [0.37, 0.63],
-            [0.2, 0.1],
-        ],
-    ]))
-
-    # Print and compare to pyfac
-    print 'TEST graph'
-    iters, converged = g.lbp(normalize=True)
-    print '(L)BP ran for %d iterations; converged = %r' % (iters, converged)
-    g.print_messages()
-    g.print_rv_marginals(normalize=True)
-
-
-def playing():
-    # rvs
-    r1 = RV('foo', 2)
-    r2 = RV('bar', 3)
-
-    # factors
-    f = Factor([r1, r2])
-    f_bar = Factor([r2])
-
-    # potentials
-    b = np.array([[3, 2, 0.32453563], [2, 5, 5]])
-    f.set_potential(b)
-    b2 = np.array([8.0, 2.0, 3.0])
-    f_bar.set_potential(b2)
-
-    # add to a graph
-    g = Graph()
-    g.add_rv(r1)
-    g.add_rv(r2)
-    g.add_factor(f)
-    g.add_factor(f_bar)
-
-    # Print stuff
-    g.print_stats()
-    print 'Joint for foo=2, bar=1:', g.joint({'foo': 1, 'bar': 1})
-    print 'Best joint:', g.bf_best_joint()
-
-
-def main():
-    playing()
-    pyfac_toygraph_test()
-    pyfac_testgraph_test()
-
-
-if __name__ == '__main__':
-    main()
