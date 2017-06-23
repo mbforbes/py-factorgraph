@@ -4,10 +4,9 @@ python:
 install:
   - pip install .
 before_script:
-  - pip install pep8 coveralls
+  - pip install pep8 pytest-cov coveralls
 script:
   - pep8 factorgraph/ tests/
-  - py.test
-  - coverage run --source=factorgraph tests/*
+  - py.test --cov=factorgraph tests/
 after_success:
   - coveralls

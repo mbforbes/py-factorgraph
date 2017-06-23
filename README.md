@@ -4,8 +4,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/mbforbes/py-factorgraph/badge.svg?branch=master)](https://coveralls.io/github/mbforbes/py-factorgraph?branch=master)
 [![license MIT](http://b.repl.ca/v1/license-MIT-brightgreen.png)](https://github.com/mbforbes/py-factorgraph/blob/master/LICENSE.txt)
 
-Factor graphs and loopy belief propagation implemented in Python. Depends only
-on [`numpy`](http://www.numpy.org/).
+This is a tiny python library that allows you to build factor graphs and run
+the (loopy) belief propagation algorithm with ease. It depends only on
+[`numpy`](http://www.numpy.org/).
 
 ## installation
 
