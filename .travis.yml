@@ -6,5 +6,5 @@ install:
 before_script:
   - pip install pep8
 script:
-  - pep8
+  - pep8 factorgraph/ tests/
   - py.test
