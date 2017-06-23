@@ -6,7 +6,7 @@ Factor graph and loopy belief propagation in Python
 
 -	[x] graph
 -	[x] bp/lbp
--	[ ] repo structure
+-	[x] repo structure
 -	[ ] tests
 -	[ ] viz
 -	[ ] CI
