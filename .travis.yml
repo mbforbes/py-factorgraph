@@ -4,7 +4,10 @@ python:
 install:
   - pip install .
 before_script:
-  - pip install pep8
+  - pip install pep8 coveralls
 script:
   - pep8 factorgraph/ tests/
   - py.test
+  - coverage run --source=factorgraph tests/*
+after_success:
+  - coveralls
