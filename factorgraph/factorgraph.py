@@ -83,8 +83,8 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def divide_safezero(a, b):
     '''
-    Divies a by b, then turns nans and infs into 0, so all division by 0 becomes
-    0.
+    Divies a by b, then turns nans and infs into 0, so all division by 0
+    becomes 0.
 
     Args:
         a (np.ndarray)
@@ -206,7 +206,8 @@ class Graph(object):
 
     # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
     #                 can use here to clean this up.
-    def factor(self, rvs, name='', potential=None, meta={}, debug=DEBUG_DEFAULT):
+    def factor(self, rvs, name='', potential=None, meta={},
+               debug=DEBUG_DEFAULT):
         '''
         Creates a Factor, adds it to this graph, and returns it. Convenience
         function.
@@ -248,14 +249,16 @@ class Graph(object):
             # weird (and can probably reformulate your graph structure to avoid
             # this duplication), or you have a bug.
             #
-            # NOTE(mbforbes): Disabling because I actually do want to be able to
-            # do this. Feel free to open GitHub issue for discussion if you're
-            # reading this and would like the assert back on.
+            # NOTE(mbforbes): Disabling because I actually do want to be able
+            # to do this. Feel free to open GitHub issue for discussion if
+            # you're reading this and would like the assert back on.
+            #
             # factor_rvs = sorted(factor._rvs)
             # for f in self._factors:
             #     rvs = sorted(f._rvs)
-            #     assert factor_rvs != rvs, 'Trying to add factor "%r" but factor ' \
-            #         'with the same RVs ("%r") already exists.' % (factor, f)
+            #     assert factor_rvs != rvs, 'Trying to add factor "%r" but ' \
+            #         'factor with the same RVs ("%r") already exists.' % (
+            #          factor, f)
         # Add it.
         self._factors += [factor]
 
@@ -344,7 +347,8 @@ class Graph(object):
                 best_a = full_a
         return best_a, best_r
 
-    def lbp(self, init=True, normalize=False, max_iters=LBP_MAX_ITERS, progress=False):
+    def lbp(self, init=True, normalize=False, max_iters=LBP_MAX_ITERS,
+            progress=False):
         '''
         Loopy belief propagation.
 
@@ -734,7 +738,8 @@ class Factor(object):
     NOTE: Factors DO NOT have to have unique names (RVs, however, do).
     '''
 
-    def __init__(self, rvs, name='', potential=None, meta={}, debug=DEBUG_DEFAULT):
+    def __init__(self, rvs, name='', potential=None, meta={},
+                 debug=DEBUG_DEFAULT):
         '''
         Args:
             rvs ([RV])
@@ -844,12 +849,12 @@ class Factor(object):
             m = rv.get_outgoing_for(self)
             if self.debug:
                 assert m.shape == (rv.n_opts,)
-            # Reshape into the correct axis (for combining). For example, if our
-            # incoming message (And thus rv.n_opts) has length 3, our belief
-            # has 5 dimensions, and this is the 2nd (of 5) dimension(s), then
-            # we want the shape of our message to be (1, 3, 1, 1, 1), which
-            # means we'll use [1, -1, 1, 1, 1] to project our (3,1) array into
-            # the correct dimension.
+            # Reshape into the correct axis (for combining). For example, if
+            # our incoming message (And thus rv.n_opts) has length 3, our
+            # belief has 5 dimensions, and this is the 2nd (of 5) dimension(s),
+            # then we want the shape of our message to be (1, 3, 1, 1, 1),
+            # which means we'll use [1, -1, 1, 1, 1] to project our (3,1) array
+            # into the correct dimension.
             #
             # Thanks to stackoverflow:
             # https://stackoverflow.com/questions/30031828/multiply-numpy-

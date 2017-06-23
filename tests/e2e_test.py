@@ -36,7 +36,6 @@ def compare_marginals_to_ref(g, ref):
     # get marginals and stringify (uses names)
     marginals = {str(rv): vals for rv, vals in g.rv_marginals(normalize=True)}
 
-
     # check all values in reference match those in the computed marginals
     for var_name, values in ref.iteritems():
         for i in range(len(values)):
@@ -148,7 +147,6 @@ def test_pyfac_testgraph():
             [0.2, 0.1],
         ],
     ]))
-
 
     # ground truth (thanks pyfac!)
     ref = {
