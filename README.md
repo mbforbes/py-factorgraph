@@ -2,14 +2,17 @@
 
 Factor graph and loopy belief propagation in Python
 
-# TODO
+[![Build Status](https://travis-ci.org/mbforbes/py-factorgraph.svg?branch=master)](https://travis-ci.org/mbforbes/py-factorgraph)
+[![license MIT](http://b.repl.ca/v1/license-MIT-brightgreen.png)](
+
+## TODO
 
 -	[x] graph
 -	[x] bp/lbp
 -	[x] repo structure
 -	[x] tests
 -	[x] viz (another repo)
--	[ ] cleanup (pep8, requirements.txt, use logging lib, etc.)
+-	[x] cleanup (pep8, requirements.txt, use logging lib, etc.)
 -	[ ] CI
 -	[ ] Readme
     -   [ ] figure out good structure for this. also don't forget:
@@ -20,3 +23,4 @@ Factor graph and loopy belief propagation in Python
     -   [ ] viz pic + link
     -	[ ] future work: API cleanup, timing and optimization, optional logging
     -   [ ] projects using this
+
