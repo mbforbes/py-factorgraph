@@ -3,7 +3,8 @@
 Factor graph and loopy belief propagation in Python
 
 [![Build Status](https://travis-ci.org/mbforbes/py-factorgraph.svg?branch=master)](https://travis-ci.org/mbforbes/py-factorgraph)
-[![license MIT](http://b.repl.ca/v1/license-MIT-brightgreen.png)](
+[![Coverage Status](https://coveralls.io/repos/github/mbforbes/py-factorgraph/badge.svg?branch=master)](https://coveralls.io/github/mbforbes/py-factorgraph?branch=master)
+[![license MIT](http://b.repl.ca/v1/license-MIT-brightgreen.png)](https://github.com/mbforbes/py-factorgraph/blob/master/LICENSE.txt)
 
 ## TODO
 
