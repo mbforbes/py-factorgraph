@@ -2,19 +2,19 @@
 
 [![Build Status](https://travis-ci.org/mbforbes/py-factorgraph.svg?branch=master)](https://travis-ci.org/mbforbes/py-factorgraph)
 [![Coverage Status](https://coveralls.io/repos/github/mbforbes/py-factorgraph/badge.svg?branch=master)](https://coveralls.io/github/mbforbes/py-factorgraph?branch=master)
-[![license MIT](http://b.repl.ca/v1/license-MIT-brightgreen.png)](https://github.com/mbforbes/py-factorgraph/blob/master/LICENSE.txt)
+[![license MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/mbforbes/py-factorgraph/blob/master/LICENSE.txt)
 
 This is a tiny python library that allows you to build factor graphs and run
 the (loopy) belief propagation algorithm with ease. It depends only on
 [`numpy`](http://www.numpy.org/).
 
-## installation
+## Installation
 
 ```bash
 pip install factorgraph
 ```
 
-## example usage
+## Example
 
 Code (found in `examples/simplegraph.py`):
 
@@ -39,7 +39,7 @@ g.factor(['b', 'a'], potential=np.array([
 
 # Run (loopy) belief propagation (LBP)
 iters, converged = g.lbp(normalize=True)
-print 'LBP ran for %d iterations. Convergence = %r' % (iters, converged)
+print 'LBP ran for %d iterations. Converged = %r' % (iters, converged)
 print
 
 # Print out the final messages from LBP
@@ -53,7 +53,8 @@ g.print_rv_marginals()
 Output:
 
 ```
-LBP ran for 3 iterations. Convergence = True
+LBP ran for 3 iterations. Converged = True
+
 Current outgoing messages:
 	b -> f(b, a) 	[ 0.33333333  0.33333333  0.33333333]
 	f(a) -> a 	[ 0.3  0.7]
@@ -61,6 +62,7 @@ Current outgoing messages:
 	a -> f(b, a) 	[ 0.3  0.7]
 	f(b, a) -> b 	[ 0.34065934  0.2967033   0.36263736]
 	f(b, a) -> a 	[ 0.23333333  0.76666667]
+
 Marginals for RVs:
 a
 	0 	0.07
@@ -71,32 +73,32 @@ b
 	2 	0.362637362637
 ```
 
-## factor graph visualization
+## Visualization
 
 _(Open source repository coming soon)_
 
-## projects using `py-factorgraph`
+## Projects using `py-factorgraph`
 
 _Open an issue or send a PR if you'd like your project listed here._
 
 - [verbphysics](https://github.com/uwnlp/verbphysics)
 
-## contributing
+## Contributing
 
 There's plenty of low-hanging fruit to work on if you'd like to contribute to
 this project. Here are some ideas:
 
-- [ ] unit tests
-- [ ] auto-generated python docs (what's popular these days?)
+- [ ] Unit tests
+- [ ] Auto-generated python docs (what's popular these days?)
 - [ ] python3 compatability
-- [ ] performance: measure bottlenecks and improve them (ideas: numba;
+- [ ] Performance: measure bottlenecks and improve them (ideas: numba;
   parallelization for large graphs;)
-- [ ] remove or improve ctrl-C catching (the `E_STOP`)
-- [ ] cleaning up the API (essentially duplicate constructors for `RV`s and
+- [ ] Remove or improve ctrl-C catching (the `E_STOP`)
+- [ ] Cleaning up the API (essentially duplicate constructors for `RV`s and
   `Factor`s within the `Graph` code; probably should have a node superclass for
   `RV`s and `Factor`s that pulls out common code).
 
-## thanks
+## Thanks
 
 - to Matthew R. Gormley and Jason Eisner for the [Structured Belief Propagation
   for NLP Tutorial](https://www.cs.cmu.edu/~mgormley/bp-tutorial/), which was
@@ -105,23 +107,3 @@ this project. Here are some ideas:
 
 - to Ryan Lester for [pyfac](https://github.com/rdlester/pyfac), whose tests I
   used directly to test my implementation
-
-## TODO
-
--	[x] graph
--	[x] bp/lbp
--	[x] repo structure
--	[x] tests
--	[x] viz (another repo)
--	[x] cleanup (pep8, requirements.txt, use logging lib, etc.)
--	[x] CI
--   [ ] coveralls
--	[ ] Readme
-    -   [x] BP tutorial link
-    -   [x] note pyfac for inspiration and test help
-    -   [x] installation
-    -   [x] examples
-    -   [ ] viz pic + link
-    -	[x] future work: API cleanup, timing and optimization, optional logging
-    -   [x] projects using this
-

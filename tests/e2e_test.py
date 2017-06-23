@@ -76,6 +76,11 @@ def test_pyfac_toygraph():
     g.add_factor(f_b)
     g.add_factor(f_ab)
 
+    # quick sanity check: make sure a couple joints are correct:
+    assert np.isclose(g.joint({'a': 0, 'b': 0}), 0.06)
+    assert np.isclose(g.joint({'a': 2, 'b': 1}), 0.63)
+
+    # reference comparison: ground truth vals (thanks pyfac!)
     ref = {
         'a': [
             0.34065934,
@@ -86,6 +91,20 @@ def test_pyfac_toygraph():
             0.88461538,
         ],
     }
+
+    # for this size of a graph, we can try all the assignments by hand to
+    # verify brute force is working correctly.
+    best_assignment, best_score = None, 0.0
+    for a_val in [0, 1, 2]:
+        for b_val in [0, 1]:
+            assignment = {'a': a_val, 'b': b_val}
+            score = g.joint({'a': a_val, 'b': b_val})
+            if score > best_score:
+                best_assignment = assignment.copy()
+                best_score = score
+    bf_assignment, bf_score = g.bf_best_joint()
+    assert bf_score == best_score, 'Brute force got wrong assignment score'
+    assert set(bf_assignment.items()) == set(best_assignment.items())
 
     # heavy lifting (lbp, marginals, reference comparison)
     compare_marginals_to_ref(g, ref)
@@ -147,6 +166,10 @@ def test_pyfac_testgraph():
             [0.2, 0.1],
         ],
     ]))
+
+    # quick sanity check: make sure a couple joints are correct:
+    assert np.isclose(g.joint({'a': 0, 'b': 0, 'c': 0, 'd': 0}), 0.18)
+    assert np.isclose(g.joint({'a': 1, 'b': 2, 'c': 3, 'd': 4}), 0.063)
 
     # ground truth (thanks pyfac!)
     ref = {

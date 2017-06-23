@@ -18,7 +18,7 @@ g.factor(['b', 'a'], potential=np.array([
 
 # Run (loopy) belief propagation (LBP)
 iters, converged = g.lbp(normalize=True)
-print 'LBP ran for %d iterations. Convergence = %r' % (iters, converged)
+print 'LBP ran for %d iterations. Converged = %r' % (iters, converged)
 print
 
 # Print out the final messages from LBP
