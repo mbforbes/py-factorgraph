@@ -75,7 +75,9 @@ b
 
 ## Visualization
 
-_(Open source repository coming soon)_
+[![An example rendering of a factor graph using the factorgraph-viz library](factorgraph-viz.png)](https://github.com/mbforbes/factorgraph-viz)
+
+Check out [`factorgraph-viz`](https://github.com/mbforbes/factorgraph-viz).
 
 ## Projects using `py-factorgraph`
 
