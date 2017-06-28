@@ -75,9 +75,10 @@ b
 
 ## Visualization
 
-[![An example rendering of a factor graph using the factorgraph-viz library](factorgraph-viz.png)](https://github.com/mbforbes/factorgraph-viz)
+You can use [`factorgraph-viz`](https://github.com/mbforbes/factorgraph-viz) to
+visualize factor graphs interactively in your web browser.
 
-Check out [`factorgraph-viz`](https://github.com/mbforbes/factorgraph-viz).
+[![An example rendering of a factor graph using the factorgraph-viz library](factorgraph-viz.png)](https://github.com/mbforbes/factorgraph-viz)
 
 ## Projects using `py-factorgraph`
 
