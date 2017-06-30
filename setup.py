@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='factorgraph',
-    version='0.0.1',
+    version='0.0.2',
     author='Maxwell Forbes',
     author_email='mbforbes@gmail.com',
     classifiers=[
