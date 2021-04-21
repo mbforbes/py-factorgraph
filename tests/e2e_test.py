@@ -37,13 +37,13 @@ def compare_marginals_to_ref(g, ref):
     marginals = {str(rv): vals for rv, vals in g.rv_marginals(normalize=True)}
 
     # check all values in reference match those in the computed marginals
-    for var_name, values in ref.iteritems():
+    for var_name, values in ref.items():
         for i in range(len(values)):
             assert np.isclose(values[i], marginals[var_name][i])
 
     # to ensure extra values aren't prodcued, check the reverse: that all
     # values in computed marginals match those in the reference
-    for var_name, values in marginals.iteritems():
+    for var_name, values in marginals.items():
         for i in range(len(values)):
             assert np.isclose(values[i], marginals[var_name][i])
 
