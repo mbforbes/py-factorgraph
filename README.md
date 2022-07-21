@@ -47,7 +47,7 @@ g.print_messages()
 print
 
 # Print out the final marginals
-g.print_rv_marginals()
+g.print_rv_marginals(normalize=True)
 ```
 
 Output:
@@ -63,14 +63,14 @@ Current outgoing messages:
 	f(b, a) -> b 	[ 0.34065934  0.2967033   0.36263736]
 	f(b, a) -> a 	[ 0.23333333  0.76666667]
 
-Marginals for RVs:
+Marginals for RVs (normalized):
 a
-	0 	0.07
-	1 	0.536666666667
+	 0 	 0.11538461538461539
+	 1 	 0.8846153846153845
 b
-	0 	0.340659340659
-	1 	0.296703296703
-	2 	0.362637362637
+	 0 	 0.34065934065934067
+	 1 	 0.29670329670329676
+	 2 	 0.3626373626373626
 ```
 
 ## Visualization
@@ -93,7 +93,6 @@ this project. Here are some ideas:
 
 - [ ] Unit tests
 - [ ] Auto-generated python docs (what's popular these days?)
-- [ ] python3 compatability
 - [ ] Performance: measure bottlenecks and improve them (ideas: numba;
   parallelization for large graphs;)
 - [ ] Remove or improve ctrl-C catching (the `E_STOP`)
