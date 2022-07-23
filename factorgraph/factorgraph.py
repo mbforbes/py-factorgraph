@@ -181,7 +181,7 @@ class Graph(object):
             int number removed
         """
         removed = 0
-        names = self._rvs.keys()
+        names = list(self._rvs.keys())
         for name in names:
             if self._rvs[name].n_edges() == 0:
                 self._rvs[name].meta["pruned"] = True

@@ -194,3 +194,24 @@ def test_pyfac_testgraph():
 
     # heavy lifting (lbp, marginals, reference comparison)
     compare_marginals_to_ref(g, ref)
+
+
+def test_pruning():
+    g = fg.Graph()
+
+    # rvs
+    g.rv("a", 2)
+    g.rv("b", 2)
+    g.factor(["a"], potential=np.array([0.3, 0.7]))
+
+    assert g.has_rv("a")
+    assert g.has_rv("b")
+    assert len(g.get_rvs()) == 2
+    assert len(g.get_factors()) == 1
+
+    g.remove_loner_rvs()
+
+    assert g.has_rv("a")
+    assert not g.has_rv("b")
+    assert len(g.get_rvs()) == 1
+    assert len(g.get_factors()) == 1
