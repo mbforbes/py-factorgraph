@@ -1,6 +1,6 @@
 # py-factorgraph
 
-[![Build Status](https://travis-ci.org/mbforbes/py-factorgraph.svg?branch=master)](https://travis-ci.org/mbforbes/py-factorgraph)
+[![Build status](https://github.com/mbforbes/py-factorgraph/actions/workflows/test.yml/badge.svg)](https://github.com/mbforbes/py-factorgraph/actions)
 [![Coverage Status](https://coveralls.io/repos/github/mbforbes/py-factorgraph/badge.svg?branch=master)](https://coveralls.io/github/mbforbes/py-factorgraph?branch=master)
 [![license MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mbforbes/py-factorgraph/blob/master/LICENSE.txt)
 
