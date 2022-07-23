@@ -16,7 +16,7 @@ pip install factorgraph
 
 ## Example
 
-Code (found in `examples/simplegraph.py`):
+Code (found in `examples/simplegraph.py`)
 
 ```python
 import numpy as np
@@ -50,7 +50,7 @@ print()
 g.print_rv_marginals(normalize=True)
 ```
 
-Output:
+Run with `python -m examples.simplegraph`. Output:
 
 ```
 LBP ran for 3 iterations. Converged = True
@@ -109,11 +109,14 @@ this project. Here are some ideas:
 
 ## Releasing
 
-TBD: Notes for myself on how to release
+Notes for myself on how to release new versions:
 
-- update setup.py
-- ...?
-
+```bash
+# Bump version in setup.py. Then,
+python setup.py sdist
+pip install twine
+twine upload dist/*
+```
 
 ## Thanks
 
