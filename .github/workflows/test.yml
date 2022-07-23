@@ -26,10 +26,10 @@ jobs:
 
       - name: Test with pytest
         run: |
-          py.test --cov=factorgraph tests/
+          py.test --cov=factorgraph --cov-report xml tests/
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: .coverage
+          path-to-lcov: .coverage.xml
