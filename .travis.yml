@@ -1,12 +1,11 @@
 language: python
 python:
-  - "2.7"
+  - "3.10"
 install:
   - pip install .
 before_script:
-  - pip install pep8 pytest-cov coveralls
+  - pip install pytest-cov coveralls
 script:
-  - pep8 factorgraph/ tests/
   - py.test --cov=factorgraph tests/
 after_success:
   - coveralls

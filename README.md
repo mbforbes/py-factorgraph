@@ -39,12 +39,12 @@ g.factor(['b', 'a'], potential=np.array([
 
 # Run (loopy) belief propagation (LBP)
 iters, converged = g.lbp(normalize=True)
-print 'LBP ran for %d iterations. Converged = %r' % (iters, converged)
-print
+print('LBP ran for %d iterations. Converged = %r' % (iters, converged))
+print()
 
 # Print out the final messages from LBP
 g.print_messages()
-print
+print()
 
 # Print out the final marginals
 g.print_rv_marginals(normalize=True)
@@ -80,6 +80,13 @@ visualize factor graphs interactively in your web browser.
 
 [![An example rendering of a factor graph using the factorgraph-viz library](factorgraph-viz.png)](https://github.com/mbforbes/factorgraph-viz)
 
+## Tests
+
+```bash
+pip install pytest-cov coveralls
+py.test --cov=factorgraph tests/
+```
+
 ## Projects using `py-factorgraph`
 
 _Open an issue or send a PR if you'd like your project listed here._
@@ -99,6 +106,14 @@ this project. Here are some ideas:
 - [ ] Cleaning up the API (essentially duplicate constructors for `RV`s and
   `Factor`s within the `Graph` code; probably should have a node superclass for
   `RV`s and `Factor`s that pulls out common code).
+
+## Releasing
+
+TBD: Notes for myself on how to release
+
+- update setup.py
+- ...?
+
 
 ## Thanks
 

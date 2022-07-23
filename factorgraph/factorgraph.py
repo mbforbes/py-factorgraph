@@ -1,4 +1,4 @@
-'''
+"""
 Implementation of factor graph and (loopy) belief propagation algorithm.
 
 Current approach (order matters):
@@ -35,26 +35,15 @@ Notes:
                         what f_a operates on.
 
 author: mbforbes
-'''
+"""
 
-# Imports
-# -----------------------------------------------------------------------------
-
-# Builtins
-import code  # code.interact(local=dict(globals(), **locals()))
 import logging
 import signal
 
-# 3rd party
 import numpy as np
 
 
-# Constants
-# -----------------------------------------------------------------------------
-
 logger = logging.getLogger(__name__)
-
-# Settings
 
 # Use this to turn all debugging on or off. Intended use: keep on when you're
 # trying stuff out. Once you know stuff works, turn off for speed. Can also
@@ -70,19 +59,18 @@ LBP_MAX_ITERS = 50
 E_STOP = False
 
 
-# Functions
-# -----------------------------------------------------------------------------
-
 # Let the user Ctrl-C at any time to stop.
 def signal_handler(signal, frame):
-    logger.info('Ctrl-C pressed; stopping early...')
+    logger.info("Ctrl-C pressed; stopping early...")
     global E_STOP
     E_STOP = True
+
+
 signal.signal(signal.SIGINT, signal_handler)
 
 
 def divide_safezero(a, b):
-    '''
+    """
     Divies a by b, then turns nans and infs into 0, so all division by 0
     becomes 0.
 
@@ -92,7 +80,7 @@ def divide_safezero(a, b):
 
     Returns:
         np.ndarray
-    '''
+    """
     # deal with divide-by-zero: turn x/0 (inf) into 0, and turn 0/0 (nan) into
     # 0.
     c = a / b
@@ -101,11 +89,8 @@ def divide_safezero(a, b):
     return c
 
 
-# Classes
-# -----------------------------------------------------------------------------
-
 class Graph(object):
-    '''
+    """
     Graph right now has no point, really (except bookkeeping all the RVs and
     factors, assuming we remember to add them), so this might be removed or
     functionality might be stuffed in here later.
@@ -117,7 +102,7 @@ class Graph(object):
     TODO: convenience functions or modifications to consider (not worth making
     unless I need them):
         - getters (and setters?) for RVs and Factors
-    '''
+    """
 
     def __init__(self, debug=DEBUG_DEFAULT):
         # add now
@@ -131,7 +116,7 @@ class Graph(object):
     # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
     #                 can use here to clean this up.
     def rv(self, name, n_opts, labels=[], meta={}, debug=DEBUG_DEFAULT):
-        '''
+        """
         Creates an RV, adds it to this graph, and returns it. Convenience
         function.
 
@@ -143,27 +128,27 @@ class Graph(object):
 
         Returns:
             RV
-        '''
+        """
         rv = RV(name, n_opts, labels, meta, debug)
         self.add_rv(rv)
         return rv
 
     def has_rv(self, rv_s):
-        '''
+        """
         Args:
             rv_s (str): Potential name of RV
 
         Returns:
             bool
-        '''
+        """
         return rv_s in self._rvs
 
     def add_rv(self, rv):
-        '''
+        """
         Args:
             rv (RV)
-        '''
-        rv.meta['pruned'] = False
+        """
+        rv.meta["pruned"] = False
         # Check RV with same name not already added.
         if self.debug:
             assert rv.name not in self._rvs
@@ -171,44 +156,43 @@ class Graph(object):
         self._rvs[rv.name] = rv
 
     def get_rvs(self):
-        '''
+        """
         Returns references to actual RVs.
 
         Returns:
             {str: RV}
-        '''
+        """
         return self._rvs
 
     def get_factors(self):
-        '''
+        """
         Returns references to actual Factors.
 
         Returns:
             [Factor]
-        '''
+        """
         return self._factors
 
     def remove_loner_rvs(self):
-        '''
+        """
         Removes RVs from the graph that have no factors attached to them.
 
         Returns:
             int number removed
-        '''
+        """
         removed = 0
         names = self._rvs.keys()
         for name in names:
             if self._rvs[name].n_edges() == 0:
-                self._rvs[name].meta['pruned'] = True
+                self._rvs[name].meta["pruned"] = True
                 del self._rvs[name]
                 removed += 1
         return removed
 
     # TODO(mbforbes): Learn about *args or **args or whatever and see whether I
     #                 can use here to clean this up.
-    def factor(self, rvs, name='', potential=None, meta={},
-               debug=DEBUG_DEFAULT):
-        '''
+    def factor(self, rvs, name="", potential=None, meta={}, debug=DEBUG_DEFAULT):
+        """
         Creates a Factor, adds it to this graph, and returns it. Convenience
         function.
 
@@ -223,7 +207,7 @@ class Graph(object):
 
         Returns:
             Factor
-        '''
+        """
         # Look up RVs if needed.
         for i in range(len(rvs)):
             if debug:
@@ -263,7 +247,7 @@ class Graph(object):
         self._factors += [factor]
 
     def joint(self, x):
-        r'''
+        r"""
         Joint is over the factors.
 
         For a probability, we use the normalization constant 1/Z
@@ -281,7 +265,7 @@ class Graph(object):
         Args:
             x ({str: str|int}) map of node names to assignments. The
                 assignments can be labels or indexes
-        '''
+        """
         # ensure the assignment x given is valid
         if self.debug:
             # check the length (that assignments to all RVs are provided)
@@ -306,7 +290,7 @@ class Graph(object):
         return prod
 
     def bf_best_joint(self):
-        '''
+        """
         Brute-force algorithm to compute the best joint assignment to the
         factor graph given the current potentials in the factors.
 
@@ -319,17 +303,17 @@ class Graph(object):
 
         Returns:
             ({str: int}, float)
-        '''
+        """
         return self._bf_bj_recurse({}, list(self._rvs.values()))
 
     def _bf_bj_recurse(self, assigned, todo):
-        '''
+        """
         Helper method for bf_best_joint.
 
         Args:
             assigned ({str: int})
             todo ([RV])
-        '''
+        """
         # base case: just look up the current assignment
         if len(todo) == 0:
             return assigned, self.joint(assigned)
@@ -347,9 +331,8 @@ class Graph(object):
                 best_a = full_a
         return best_a, best_r
 
-    def lbp(self, init=True, normalize=False, max_iters=LBP_MAX_ITERS,
-            progress=False):
-        '''
+    def lbp(self, init=True, normalize=False, max_iters=LBP_MAX_ITERS, progress=False):
+        """
         Loopy belief propagation.
 
         FAQ:
@@ -368,7 +351,7 @@ class Graph(object):
 
         -   Q: Do factors' potential functions change during (L)BP?
             A: No. Only the messages change.
-        '''
+        """
         # Sketch of algorithm:
         # -------------------
         # preprocessing:
@@ -397,7 +380,7 @@ class Graph(object):
 
             if progress:
                 # self.print_messages(nodes)
-                logger.debug('\titeration %d / %d (max)', cur_iter, max_iters)
+                logger.debug("\titeration %d / %d (max)", cur_iter, max_iters)
 
             # Comptue outgoing messages:
             converged = True
@@ -408,22 +391,22 @@ class Graph(object):
         return cur_iter, converged
 
     def _sorted_nodes(self):
-        '''
+        """
         Returns
             [RV|Factor] sorted by # edges
-        '''
+        """
         rvs = list(self._rvs.values())
         facs = self._factors
         nodes = rvs + facs
         return sorted(nodes, key=lambda x: x.n_edges())
 
     def init_messages(self, nodes=None):
-        '''
+        """
         Sets all messages to uniform.
 
         Args:
             nodes ([RV|Factor], default=None) if None, uses all nodes
-        '''
+        """
         if nodes is None:
             nodes = self._sorted_nodes()
         for n in nodes:
@@ -433,20 +416,20 @@ class Graph(object):
         print(self._sorted_nodes())
 
     def print_messages(self, nodes=None):
-        '''
+        """
         Prints (outgoing) messages for node in nodes.
 
         Args:
             nodes ([RV|Factor])
-        '''
+        """
         if nodes is None:
             nodes = self._sorted_nodes()
-        print('Current outgoing messages:')
+        print("Current outgoing messages:")
         for n in nodes:
             n.print_messages()
 
     def rv_marginals(self, rvs=None, normalize=False):
-        '''
+        """
         Gets marginals for rvs.
 
         The marginal for RV i is computed as:
@@ -460,7 +443,7 @@ class Graph(object):
 
         Returns:
             [(RV, np.ndarray)]
-        '''
+        """
         if rvs is None:
             rvs = self._rvs.values()
 
@@ -476,7 +459,7 @@ class Graph(object):
         return tuples
 
     def print_rv_marginals(self, rvs=None, normalize=False):
-        '''
+        """
         Displays marginals for rvs.
 
         The marginal for RV i is computed as:
@@ -487,12 +470,12 @@ class Graph(object):
             rvs ([RV], opt): Displays all if None
             normalize (bool, opt) whether to turn this into a probability
                 distribution
-        '''
+        """
         # Preamble
-        disp = 'Marginals for RVs'
+        disp = "Marginals for RVs"
         if normalize:
-            disp += ' (normalized)'
-        disp += ':'
+            disp += " (normalized)"
+        disp += ":"
         print(disp)
 
         # Extract
@@ -505,27 +488,27 @@ class Graph(object):
             if len(rv.labels) > 0:
                 vals = rv.labels
             for i in range(len(vals)):
-                print('\t', vals[i], '\t', marg[i])
+                print("\t", vals[i], "\t", marg[i])
 
     def debug_stats(self):
-        logger.debug('Graph stats:')
-        logger.debug('\t%d RVs', len(self._rvs))
-        logger.debug('\t%d factors', len(self._factors))
+        logger.debug("Graph stats:")
+        logger.debug("\t%d RVs", len(self._rvs))
+        logger.debug("\t%d factors", len(self._factors))
 
 
 class RV(object):
-    '''
+    """
     NOTE: All RVs must have unique names.
-    '''
+    """
 
     def __init__(self, name, n_opts, labels=[], meta={}, debug=DEBUG_DEFAULT):
-        '''
+        """
         Args:
             name (str)                must be globally unique w.r.t. other RVs
             n_opts (int)              how many values it can take
             labels ([str], opt)       opt names for each var. len == n_opts
             debug (bool, opt)         a gazillion asserts
-        '''
+        """
         # validation
         if debug:
             # labels must be [str] if provided
@@ -554,38 +537,38 @@ class RV(object):
         return hash(self.name)
 
     def get_factors(self):
-        '''
+        """
         Returns original references
 
         Returns:
             [Factor]
-        '''
+        """
         return self._factors
 
     def get_outgoing(self):
-        '''
+        """
         Returns COPY
 
         Returns:
             [np.ndarray]
-        '''
+        """
         return self._outgoing[:]
 
     def init_lbp(self):
-        '''
+        """
         Clears any existing messages and inits all messages to uniform.
-        '''
+        """
         self._outgoing = [np.ones(self.n_opts) for f in self._factors]
 
     def print_messages(self):
-        '''
+        """
         Displays the current outgoing messages for this RV.
-        '''
+        """
         for i, f in enumerate(self._factors):
-            print('\t', self, '->', f, '\t', self._outgoing[i])
+            print("\t", self, "->", f, "\t", self._outgoing[i])
 
     def recompute_outgoing(self, normalize=False):
-        '''
+        """
         TODO: Consider returning SSE for convergence checking.
 
         TODO: Is normalizing each outgoing message at the very end the right
@@ -593,10 +576,10 @@ class RV(object):
 
         Returns:
             bool whether this RV converged
-        '''
+        """
         # Good old safety.
         if self.debug:
-            assert self._outgoing is not None, 'must call init_lbp() first'
+            assert self._outgoing is not None, "must call init_lbp() first"
 
         # Save old for convergence check.
         old_outgoing = self._outgoing[:]
@@ -612,13 +595,14 @@ class RV(object):
             if normalize:
                 o = divide_safezero(o, sum(o))
             self._outgoing[i] = o
-            convg = convg and \
-                sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
-                self.n_opts
+            convg = (
+                convg
+                and sum(np.isclose(old_outgoing[i], self._outgoing[i])) == self.n_opts
+            )
         return convg
 
     def get_outgoing_for(self, f):
-        '''
+        """
         Gets outgoing message for factor f.
 
         Args:
@@ -626,17 +610,17 @@ class RV(object):
 
         Returns:
             np.ndarray of length self.n_opts
-        '''
+        """
         # Good old safety.
         if self.debug:
-            assert self._outgoing is not None, 'must call init_lbp() first'
+            assert self._outgoing is not None, "must call init_lbp() first"
 
         for i, fac in enumerate(self._factors):
             if f == fac:
                 return self._outgoing[i]
 
     def get_belief(self):
-        '''
+        """
         Returns the belief (AKA marginal probability) of this RV, using its
         current incoming messages.
 
@@ -644,7 +628,7 @@ class RV(object):
             marginal (np.ndarray)   of length self.n_opts         ,
             incoming ([np.ndarray]) message for f in self._factors,
         )
-        '''
+        """
         incoming = []
         total = np.ones(self.n_opts)
         for i, f in enumerate(self._factors):
@@ -656,14 +640,14 @@ class RV(object):
         return (total, incoming)
 
     def n_edges(self):
-        '''
+        """
         Returns:
             int how many factors this RV is connected to
-        '''
+        """
         return len(self._factors)
 
     def has_label(self, label):
-        '''
+        """
         Returns whether label indicates a valid value for this RV.
 
         Args:
@@ -671,7 +655,7 @@ class RV(object):
 
         returns
             bool
-        '''
+        """
         # If int, make sure fits in n_opts. If str, make sure it's in the list.
         if len(self.labels) == 0:
             # Tracking ints only. Provided label must be int.
@@ -688,7 +672,7 @@ class RV(object):
             return label < self.n_opts
 
     def get_int_label(self, label):
-        '''
+        """
         Returns the integer-valued label for this label. The provided label
         might be an integer (in which case it's already in the correct form and
         will be returned unchanged) or a string (in which case it will be
@@ -702,51 +686,49 @@ class RV(object):
 
         returns
             int
-        '''
+        """
         if type(label) is int:
             return label
         # assume string otherwise
         return self.labels.index(label)
 
     def attach(self, factor):
-        '''
+        """
         Don't call this; automatically called by Factor's attach(...). This
         doesn't update the factor's attachment (which is why you shouldn't call
         it).
 
         factor (Factor)
-        '''
+        """
         # check whether factor already added to rv; reach factor should be
         # added at most once to an rv.
         if self.debug:
             for f in self._factors:
                 # We really only need to worry about the exact instance here,
                 # so just using the builtin object (mem address) equals.
-                assert f != factor, ('Can\'t re-add factor %r to rv %r' %
-                                     (factor, self))
+                assert f != factor, "Can't re-add factor %r to rv %r" % (factor, self)
 
         # Do the registration
         self._factors += [factor]
 
 
 class Factor(object):
-    '''
+    """
     Invariant: RVs (self._rvs), dims of potential (self._potential), and
     outgoing messages (self._outgoing) must refer to the same RVs in identical
     order.
 
     NOTE: Factors DO NOT have to have unique names (RVs, however, do).
-    '''
+    """
 
-    def __init__(self, rvs, name='', potential=None, meta={},
-                 debug=DEBUG_DEFAULT):
-        '''
+    def __init__(self, rvs, name="", potential=None, meta={}, debug=DEBUG_DEFAULT):
+        """
         Args:
             rvs ([RV])
             name (str, opt)
             potential (np.array, opt) See set_potential for more information.
             debug (bool, opt)
-        '''
+        """
         # at construction time
         self.name = name
         self.debug = debug
@@ -767,49 +749,49 @@ class Factor(object):
             self.set_potential(potential)
 
     def __repr__(self):
-        name = 'f' if len(self.name) == 0 else self.name
-        return name + '(' + ', '.join([str(rv) for rv in self._rvs]) + ')'
+        name = "f" if len(self.name) == 0 else self.name
+        return name + "(" + ", ".join([str(rv) for rv in self._rvs]) + ")"
 
     def n_edges(self):
-        '''
+        """
         Returns:
             int how many RVs this Factor is connected to
-        '''
+        """
         return len(self._rvs)
 
     def get_potential(self):
-        '''
+        """
         Returns:
             np.ndarray
-        '''
+        """
         return self._potential
 
     def get_rvs(self):
-        '''
+        """
         Returns original references
 
         Returns
             [RV]
-        '''
+        """
         return self._rvs
 
     def init_lbp(self):
-        '''
+        """
         Clears any existing messages and inits all messages to uniform.
-        '''
+        """
         self._outgoing = [np.ones(r.n_opts) for r in self._rvs]
 
     def get_outgoing(self):
-        '''
+        """
         Returns COPY of outgoing.
 
         Returns:
             [np.ndarray] where element i is of shape get_rvs()[i].n_opts
-        '''
+        """
         return self._outgoing[:]
 
     def get_outgoing_for(self, rv):
-        '''
+        """
         Gets the message for the random variable rv that this factor is
         connected to. Prereq: this must be connected to rv. Duh. This code
         doesn't check that.
@@ -819,25 +801,25 @@ class Factor(object):
 
         Returns:
             np.ndarray of length rv.n_opts
-        '''
+        """
         # Good old safety.
         if self.debug:
-            assert self._outgoing is not None, 'must call init_lbp() first'
+            assert self._outgoing is not None, "must call init_lbp() first"
 
         for i, r in enumerate(self._rvs):
             if r == rv:
                 return self._outgoing[i]
 
     def recompute_outgoing(self, normalize=False):
-        '''
+        """
         TODO: Consider returning SSE for convergence checking.
 
         Returns:
             bool whether this Factor converged
-        '''
+        """
         # Good old safety.
         if self.debug:
-            assert self._outgoing is not None, 'must call init_lbp() first'
+            assert self._outgoing is not None, "must call init_lbp() first"
 
         # Save old for convergence check.
         old_outgoing = self._outgoing[:]
@@ -871,40 +853,41 @@ class Factor(object):
         all_idx = list(range(len(belief.shape)))
         for i, rv in enumerate(self._rvs):
             rv_belief = divide_safezero(belief, incoming[i])
-            axes = tuple(all_idx[:i] + all_idx[i+1:])
+            axes = tuple(all_idx[:i] + all_idx[i + 1 :])
             o = rv_belief.sum(axis=axes)
             if self.debug:
-                assert self._outgoing[i].shape == (rv.n_opts, )
+                assert self._outgoing[i].shape == (rv.n_opts,)
             if normalize:
                 o = divide_safezero(o, sum(o))
             self._outgoing[i] = o
-            convg = convg and \
-                sum(np.isclose(old_outgoing[i], self._outgoing[i])) == \
-                rv.n_opts
+            convg = (
+                convg
+                and sum(np.isclose(old_outgoing[i], self._outgoing[i])) == rv.n_opts
+            )
 
         return convg
 
     def print_messages(self):
-        '''
+        """
         Displays the current outgoing messages for this Factor.
-        '''
+        """
         for i, rv in enumerate(self._rvs):
-            print('\t', self, '->', rv, '\t', self._outgoing[i])
+            print("\t", self, "->", rv, "\t", self._outgoing[i])
 
     def attach(self, rv):
-        '''
+        """
         Call this to attach this factor to the RV rv. Clears any potential that
         has been set.
 
         rv (RV)
-        '''
+        """
         # check whether rv already added to factor; reach rv should be added at
         # most once to a factor.
         if self.debug:
             for r in self._rvs:
                 # We really only need to worry about the exact instance here,
                 # so just using the builtin object (mem address) equals.
-                assert r != rv, 'Can\'t re-add RV %r to factor %r' % (rv, self)
+                assert r != rv, "Can't re-add RV %r to factor %r" % (rv, self)
 
         # register with rv
         rv.attach(self)
@@ -916,7 +899,7 @@ class Factor(object):
         self._potential = None
 
     def set_potential(self, p):
-        '''
+        """
         Call this to set the potential for a factor. The passed potential p
         must dimensionally match all attached RVs.
 
@@ -991,28 +974,32 @@ class Factor(object):
 
         Args:
             p (np.array)
-        '''
+        """
         # check that the new potential has the correct shape
         if self.debug:
             # ensure overall dims match
             got = len(p.shape)
             want = len(self._rvs)
-            assert got == want, ('potential %r has %d dims but needs %d' %
-                                 (p, got, want))
+            assert got == want, "potential %r has %d dims but needs %d" % (p, got, want)
 
             # Ensure each dim matches.
             for i, d in enumerate(p.shape):
                 got = d
                 want = self._rvs[i].n_opts
-                assert got == want, (
-                    'potential %r dim #%d has %d opts but rv has %d opts' %
-                    (p, i+1, got, want))
+                assert (
+                    got == want
+                ), "potential %r dim #%d has %d opts but rv has %d opts" % (
+                    p,
+                    i + 1,
+                    got,
+                    want,
+                )
 
         # Set it
         self._potential = p
 
     def eval(self, x):
-        '''
+        """
         Returns a single cell of the potential function.
 
         Call this factor f_a. This returns f_a's potential function value for a
@@ -1025,7 +1012,7 @@ class Factor(object):
         This checks (if debug is on) that all attached RVs have a valid
         assignment in x. Note that if this is begin called from Graph.joint(),
         this property is also checked there.
-        '''
+        """
         if self.debug:
             # check that each RV has a valid assignment (<-)
             for rv in self._rvs:
